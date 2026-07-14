@@ -1,0 +1,77 @@
+---
+title: "接入 Claude Code"
+description: "为 Claude Code 添加 ReMe 召回与会话自动记录。"
+---
+
+ReMe 的 Claude Code plugin 提供两条链路：MCP 工具负责召回，Stop hook 在会话结束后异步记录 transcript。
+
+## 前置条件
+
+先按 [快速开始](/reme/0.4.0.6/zh/quickstart) 安装 ReMe。自动整理会话需要 LLM，因此还需在启动目录配置 `LLM_API_KEY` 和 `LLM_BASE_URL`。
+
+## 1. 启动 MCP 服务
+
+```bash
+reme start service.backend=mcp service.transport=streamable-http
+```
+
+默认 MCP 端点为 `http://127.0.0.1:2333/mcp`。该服务应保持运行，多个 Claude Code 窗口可以共享它。
+
+## 2. 安装 plugin
+
+在 Claude Code 中，将本仓库的 `plugins` 目录添加为 marketplace 并安装：
+
+```text
+/plugin marketplace add ./plugins
+/plugin install reme@reme-marketplace
+```
+
+重启 Claude Code，再运行 `/mcp`，确认名为 `reme` 的 server 和工具已经连接。
+
+plugin 包含：
+
+```text
+plugins/reme/
+├── .mcp.json                    MCP 服务地址
+├── hooks/auto_memory.py         Stop hook
+└── skills/reme-memory/SKILL.md  召回规则
+```
+
+如果仓库不在当前目录，请将 `/plugin marketplace add` 的参数替换为实际的本地路径。完整安装说明见仓库中的 [`plugins/README.md`](https://github.com/agentscope-ai/ReMe/blob/main/plugins/README.md)。
+
+## 3. 验证召回
+
+先在终端写入一条容易识别的记忆：
+
+```bash
+reme write \
+  path=digest/wiki/claude-code-check \
+  name="Claude Code Check" \
+  description="Claude Code 接入验证" \
+  content="项目约定：提交前先运行 pytest。"
+```
+
+随后让 Claude Code 回答“这个项目提交前要做什么？”。它应先调用 ReMe 的 `search` / `read` 工具，再根据记忆回答。
+
+## 4. 验证自动记录
+
+与 Claude Code 进行一段包含长期信息的对话并结束会话。Stop hook 会在后台调用 `auto_memory_cc`；稍后搜索刚才的关键词：
+
+```bash
+reme search query="<刚才对话中的关键词>" limit=5
+```
+
+记录成功后，workspace 的 `daily/<date>/` 下会出现对应会话卡片。Stop hook 是 best-effort：服务不可达时不会阻塞 Claude Code，只会写日志。
+
+## 端口与日志
+
+plugin 的服务地址位于 `plugins/reme/.mcp.json`。如果 ReMe 使用其他端口，必须同步修改其中的 URL。也可以用 `REME_HOST` 和 `REME_PORT` 覆盖 hook 的连接地址。
+
+hook 日志默认位于 `plugins/reme/logs/auto_memory_hook.log`。连接失败时先运行：
+
+```bash
+reme find_reme
+reme health_check
+```
+
+更多连接问题见 [Support](/reme/0.4.0.6/zh/support)。

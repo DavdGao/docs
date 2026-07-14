@@ -1,0 +1,77 @@
+---
+title: "参与贡献"
+description: "配置 ReMe 开发环境、运行测试并准备 Pull Request。"
+---
+
+ReMe 欢迎 Bug 修复、测试、文档和功能贡献。大改动开始前，请先搜索或创建 [GitHub Issue](https://github.com/agentscope-ai/ReMe/issues)，对齐用户行为、兼容性和测试范围。
+
+## 开发环境
+
+ReMe 需要 Python 3.11 或更高版本：
+
+```bash
+git clone https://github.com/agentscope-ai/ReMe.git
+cd ReMe
+python -m venv .venv
+source .venv/bin/activate
+pip install -e ".[full]"
+pre-commit install
+```
+
+## 代码地图
+
+```text
+reme/
+├── reme.py          CLI 入口
+├── application.py   应用装配与生命周期
+├── config/          默认配置和解析
+├── components/      服务、客户端、存储和其他可复用组件
+├── steps/           用户 action 与后台流程的原子步骤
+├── schema/          配置、请求、响应和持久化结构
+└── utils/           通用工具
+
+tests/
+├── unit/            快速、隔离的行为测试
+└── integration/     跨组件或外部依赖测试
+```
+
+源码和测试是架构与扩展方式的权威说明。新增能力前先搜索相邻实现、抽象基类、注册逻辑和对应测试，不要依据一份静态架构手册复制旧模式。
+
+## 本地检查
+
+提交前至少运行：
+
+```bash
+pre-commit run --all-files
+pytest
+```
+
+开发时可以先运行相关用例：
+
+```bash
+pytest tests/unit/test_reme_cli.py
+pytest tests/unit -q
+```
+
+依赖 LLM、embedding 或外部服务的测试可能需要额外环境变量。无法运行时，在 PR 中明确说明原因和替代验证。
+
+## 变更要求
+
+- Bug 修复应包含能复现问题的回归测试。
+- 新增或修改 action 时，同步更新 job schema 和入口测试。
+- 修改配置时保持默认配置可启动，并覆盖合并与兼容行为。
+- 修改文件、索引、wikilink 或持久化结构时，考虑已有 workspace 的兼容性。
+- 用户可见的安装、接入、稳定契约或排障行为发生变化时，更新对应文档。
+- 实现细节只更新代码注释和测试，不为每个类或 Step 新建手册页。
+
+## Pull Request
+
+PR 应说明：
+
+1. 用户可观察到的问题和变化；
+2. 选择该实现的原因；
+3. 已运行的测试；
+4. 配置、数据或兼容性影响；
+5. 未解决的限制。
+
+提交和 PR 标题建议使用简短的 Conventional Commit 形式，例如 `fix(search): rebuild stale link index`。路线图与设计讨论使用 Issues / Project，版本变化使用 [GitHub Releases](https://github.com/agentscope-ai/ReMe/releases)。

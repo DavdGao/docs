@@ -1,0 +1,48 @@
+---
+title: "Overview"
+description: "Understand what ReMe solves, where it fits, and how its memory model works."
+---
+
+ReMe gives agents a visible, user-controlled long-term memory layer. Its durable state is ordinary Markdown, JSONL, YAML, and resource files—not records that only the system can inspect.
+
+## What ReMe Solves
+
+Agent context usually disappears when a session ends. Even with a vector database, users may not know what was remembered, where a conclusion came from, or how to correct and move that memory.
+
+ReMe places memory in a local workspace:
+
+- raw conversations and resources remain available as sources;
+- durable information is refined into Markdown memories;
+- files are indexed, linked, and recalled when needed;
+- users can read, edit, delete, back up, or version the result directly.
+
+Memory becomes shared knowledge owned by the user instead of opaque agent state.
+
+## Where It Fits
+
+- **Personal assistants** that retain preferences, background, plans, and important events.
+- **Coding agents** that carry project decisions, conventions, and debugging experience across sessions.
+- **Personal knowledge bases** built from conversations, notes, and linked resources.
+- **Experience-driven agents** that preserve reusable procedures and lessons learned.
+
+ReMe may need another system alongside it when you need strict transactions, complex authorization, or very large-scale online retrieval. It is also a memory layer—not a complete agent product—and it deliberately avoids invisible, unbounded collection.
+
+## How Memory Flows
+
+```text
+conversations / resources -> sources -> daily notes -> durable memory
+                                                  |
+current agent task <-------- search and links -----+
+```
+
+The current implementation uses Auto Memory, Auto Resource, and Auto Dream for refinement, plus keyword, embedding, and wikilink retrieval. Those names can change. The durable promise is that sources remain traceable, memories remain correctable, and results remain in user-accessible files.
+
+## Offline Use
+
+File operations, keyword search, and wikilink traversal do not require an LLM. Conversation refinement, resource interpretation, and long-term consolidation need a compatible LLM. Semantic search additionally needs an embedding service.
+
+## Next
+
+- Validate the workflow in [Quick Start](/reme/0.4.0.6/en/quickstart).
+- Understand the trade-offs in [Concepts](/reme/0.4.0.6/en/concepts).
+- Connect an agent with the [Integration Guide](/reme/0.4.0.6/en/guides).

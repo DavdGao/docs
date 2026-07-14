@@ -1,0 +1,77 @@
+---
+title: "Contributing"
+description: "Set up ReMe development, run tests, and prepare a pull request."
+---
+
+ReMe welcomes bug fixes, tests, documentation, and features. Before a substantial change, search or open a [GitHub Issue](https://github.com/agentscope-ai/ReMe/issues) to align on user behavior, compatibility, and test scope.
+
+## Development Setup
+
+ReMe requires Python 3.11 or newer:
+
+```bash
+git clone https://github.com/agentscope-ai/ReMe.git
+cd ReMe
+python -m venv .venv
+source .venv/bin/activate
+pip install -e ".[full]"
+pre-commit install
+```
+
+## Code Map
+
+```text
+reme/
+├── reme.py          CLI entrypoint
+├── application.py   application assembly and lifecycle
+├── config/          defaults and configuration parsing
+├── components/      services, clients, stores, and reusable components
+├── steps/           atomic steps behind actions and background flows
+├── schema/          configuration, request, response, and persistent models
+└── utils/           shared utilities
+
+tests/
+├── unit/            fast, isolated behavior tests
+└── integration/     cross-component and external-dependency tests
+```
+
+Source and tests are the authoritative architecture and extension guide. Before adding a capability, find adjacent implementations, abstract bases, registration paths, and tests instead of copying a pattern from a static architecture manual.
+
+## Local Checks
+
+Before submitting, run at least:
+
+```bash
+pre-commit run --all-files
+pytest
+```
+
+During development, run focused tests first:
+
+```bash
+pytest tests/unit/test_reme_cli.py
+pytest tests/unit -q
+```
+
+Tests using an LLM, embeddings, or an external service may need extra environment variables. If they cannot run locally, state why and describe substitute validation in the PR.
+
+## Change Requirements
+
+- Include a reproducing regression test with a bug fix.
+- Update job schemas and entrypoint tests when changing an action.
+- Keep the default configuration launchable and test merge and compatibility behavior.
+- Consider existing workspaces when changing files, indexes, wikilinks, or persistent schemas.
+- Update the relevant page when user-visible installation, integration, stable contracts, or troubleshooting behavior changes.
+- Keep implementation details in code comments and tests; do not create a manual page for every class or step.
+
+## Pull Requests
+
+A PR should explain:
+
+1. the user-observable problem and change;
+2. why this implementation was chosen;
+3. tests that were run;
+4. configuration, data, and compatibility impact;
+5. remaining limitations.
+
+Use a concise Conventional Commit-style title such as `fix(search): rebuild stale link index`. Keep roadmap and design discussion in Issues / Project, and publish version changes through [GitHub Releases](https://github.com/agentscope-ai/ReMe/releases).

@@ -1,0 +1,66 @@
+---
+title: "Integrate ReMe"
+description: "Choose among Skill, CLI, MCP, HTTP, and Python integration paths."
+---
+
+ReMe runs as a local memory service. Every integration method shares the same workspace; the difference is how an agent triggers search, file operations, and memory refinement.
+
+## Choose a Method
+
+| Method | Best for | Characteristics |
+|---|---|---|
+| Skill + CLI | Agents that execute commands and read `SKILL.md` | Lightest option, visible behavior rules, easy to debug |
+| MCP | Agents with native MCP support | Automatic tool-schema discovery; a natural fit for Claude Code |
+| HTTP | Custom applications and non-Python runtimes | Ordinary JSON calls across languages |
+| Python | Deep, in-process integration | Reuses app lifecycle and model configuration at higher coupling |
+
+Start with Skill + CLI when unsure. Use MCP when the host supports it natively. Choose Python only when the host application needs to own the full lifecycle.
+
+## Shared Integration Contract
+
+Whichever protocol you use, the host agent should follow the same memory behavior:
+
+1. Before answering about earlier conversations, preferences, decisions, or project history, call `search`, then `read` relevant files.
+2. Record only durable facts, preferences, decisions, and lessons. Do not store secrets or sensitive information by default.
+3. Call `auto_memory` after a useful session or stable fact appears, using a stable `session_id`.
+4. Let ReMe's cron run `auto_dream`, or trigger it from the host lifecycle.
+5. ReMe returns memory; the host agent decides whether, when, and how to use it.
+
+The repository's [`skills/reme_memory/SKILL.md`](https://github.com/agentscope-ai/ReMe/blob/main/skills/reme_memory/SKILL.md) contains this contract. Install the complete `skills/reme_memory/` directory in an agent's skill directory to reuse it.
+
+## MCP
+
+Start a shared MCP service:
+
+```bash
+reme start service.backend=mcp service.transport=streamable-http
+```
+
+The default endpoint is `http://127.0.0.1:2333/mcp`. Add that URL to the MCP client, which discovers the tools exposed by the running version. Keep client and server ports aligned.
+
+MCP lets the model choose tools. Session recording and consolidation still belong in the host agent's hooks or lifecycle.
+
+## HTTP
+
+The default launch mode provides HTTP:
+
+```bash
+reme start
+```
+
+Each served job maps to `POST /{action}` with a JSON body:
+
+```bash
+curl -s http://127.0.0.1:2333/search \
+  -H 'Content-Type: application/json' \
+  -d '{"query":"project decisions","limit":5}'
+```
+
+Use `/docs` or `/openapi.json` on the running service for a schema that matches the installed version.
+
+## Maintained Integrations
+
+- [Claude Code](/reme/0.4.0.6/en/guides/claude-code): official plugin, MCP recall, and automatic recording through a Stop hook.
+- [QwenPaw](/reme/0.4.0.6/en/guides/qwenpaw): ReMe skill integration with recording controlled by the application lifecycle.
+
+Before debugging an agent, run the write and search flow in [Quick Start](/reme/0.4.0.6/en/quickstart) to verify ReMe itself.

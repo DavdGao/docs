@@ -1,24 +1,17 @@
 # AgentScope Documentation
 
-This repository contains the official documentation for [AgentScope](https://github.com/modelscope/agentscope), a production-ready, multi-agent framework for building LLM-empowered agent applications. The docs site is built with [Mintlify](https://mintlify.com).
+This repository contains the unified documentation site for [AgentScope](https://github.com/agentscope-ai/agentscope) and [ReMe](https://github.com/agentscope-ai/ReMe). The site is built with [Mintlify](https://mintlify.com) and deployed at [docs.agentscope.io](https://docs.agentscope.io).
 
-## Overview
+## Documentation Sets
 
-AgentScope provides a simple yet efficient way to build LLM-empowered agent applications, with built-in support for:
+- **AgentScope**: a framework for building agent applications.
+- **ReMe**: a local-first, file-native memory layer for AI agents.
 
-- Multi-agent orchestration
-- Multiple model providers (DashScope, Gemini, OpenAI, Anthropic, Ollama)
-- Memory (short-term and long-term)
-- Tools and RAG
-- Observability and evaluation
+Each project owns its version history and bilingual navigation. Version selectors are defined independently for the `AgentScope` and `ReMe` tabs in `docs.json`.
 
-## Development
+## Local Development
 
-### Prerequisites
-
-- Node.js version 19 or higher
-
-### Local Preview
+Use an active Node.js LTS release (Node 20 or 22).
 
 Install the [Mintlify CLI](https://www.npmjs.com/package/mint):
 
@@ -26,47 +19,53 @@ Install the [Mintlify CLI](https://www.npmjs.com/package/mint):
 npm i -g mint
 ```
 
-Start the local development server at the root of this repository (where `docs.json` is located):
+From the repository root, validate the site or start a preview:
 
 ```bash
+mint validate
 mint dev
 ```
 
-View your local preview at `http://localhost:3000`.
+The preview is available at `http://localhost:3000` by default.
 
 ## Repository Structure
 
-```
+```text
 .
-├── basic-concepts/       # Core AgentScope concepts (msg, agent, model, memory, tool)
-├── building-blocks/      # Advanced building blocks
-├── tutorial/             # Step-by-step tutorials
-├── out-of-box-agents/    # Pre-built agents
-├── api-reference/        # API documentation
-├── observe-and-evaluate/ # Monitoring and evaluation
-├── tune-agent/           # Agent tuning guides
-├── deploy-and-serve/     # Deployment options
-├── essentials/           # Documentation components
-├── others/               # FAQ and additional resources
-└── docs.json             # Mintlify navigation config
+├── agentscope/
+│   └── <version>/{en,zh}/   # Versioned AgentScope documentation
+├── reme/
+│   └── <version>/{en,zh}/   # Versioned ReMe documentation
+├── images/                  # Shared static assets
+├── scripts/                 # Documentation maintenance scripts
+├── docs.json                # Mintlify navigation and redirects
+└── CLAUDE.md                # Writing and review guidelines
 ```
+
+## Version Management
+
+Published documentation is immutable within its version directory. For a new release:
+
+1. Copy the latest relevant version into a new project version directory.
+2. Update every version-specific internal link in the copied pages.
+3. Add the version under the matching project tab for both languages in `docs.json`.
+4. Point that project's `latest` or `stable` redirect at the new version.
+5. Run `mint validate` before submitting the change.
+
+AgentScope versions can be created with `scripts/create-version.sh`. ReMe follows the same directory and navigation model under `reme/` and uses project-scoped aliases such as `/reme/stable/...` so its releases do not affect AgentScope aliases.
 
 ## Contributing
 
 When adding or updating documentation:
 
-1. Place `.mdx` files in the appropriate directory
-2. Update `docs.json` to include new pages in the navigation
-3. Start every page with YAML frontmatter (`title` and `description`)
-4. Follow the [writing style guidelines](CLAUDE.md) in this repo
-5. Preview changes locally before submitting a PR
-
-## Troubleshooting
-
-- **Dev server not running**: Run `mint update` to get the latest CLI version.
-- **Page shows 404**: Ensure you are running in the folder containing `docs.json`.
+1. Place `.mdx` files in the correct project, version, and language directory.
+2. Update `docs.json` when pages or versions change.
+3. Start every page with YAML frontmatter containing `title` and `description`.
+4. Follow [CLAUDE.md](CLAUDE.md) for writing and review conventions.
+5. Run `mint validate` before submitting a pull request.
 
 ## Resources
 
 - [AgentScope GitHub](https://github.com/agentscope-ai/agentscope)
+- [ReMe GitHub](https://github.com/agentscope-ai/ReMe)
 - [Mintlify Documentation](https://mintlify.com/docs)

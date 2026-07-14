@@ -1,0 +1,96 @@
+---
+title: "Quick Start"
+description: "Install ReMe and complete a verifiable write, index, search, and read loop."
+---
+
+This page uses ReMe's model-free capabilities to complete a verifiable write → index → search → read loop.
+
+## 1. Install
+
+ReMe requires Python 3.11 or newer:
+
+```bash
+pip install "reme-ai[core]"
+```
+
+For source development:
+
+```bash
+git clone https://github.com/agentscope-ai/ReMe.git
+cd ReMe
+pip install -e ".[core]"
+```
+
+## 2. Start the Service
+
+In one terminal, run:
+
+```bash
+reme start
+```
+
+The default workspace is `.reme/` under the launch directory, and the service listens on `127.0.0.1:2333`. In another terminal, check it:
+
+```bash
+reme health_check
+```
+
+Use another port when necessary:
+
+```bash
+reme start service.port=8181
+```
+
+## 3. Write a Memory
+
+```bash
+reme write \
+  path=digest/wiki/quick-start-demo \
+  name="Quick Start Demo" \
+  description="My first ReMe memory" \
+  content="# Quick Start Demo
+
+ReMe stores agent memory as user-readable Markdown."
+```
+
+ReMe adds the `.md` suffix and writes frontmatter plus content to `.reme/digest/wiki/quick-start-demo.md`.
+
+## 4. Search and Read
+
+The background index normally discovers the file automatically. If it does not appear immediately, wait briefly or run `reme reindex` once.
+
+```bash
+reme search query="agent memory Markdown" limit=5
+reme read path=digest/wiki/quick-start-demo.md
+```
+
+Open the file in the workspace too. Matching CLI output and disk content confirm that the minimum loop works.
+
+```text
+.reme/
+├── metadata/    derived indexes, graph, and runtime state
+├── session/     raw sessions
+├── resource/    source resources
+├── daily/       daily refinement
+└── digest/      durable memory
+```
+
+## 5. Enable Memory Refinement When Needed
+
+Conversation refinement, resource interpretation, and consolidation require an LLM. Semantic search also requires embeddings. Add a `.env` in the launch directory when you need them:
+
+```bash
+LLM_API_KEY=sk-xxx
+LLM_BASE_URL=https://dashscope.aliyuncs.com/compatible-mode/v1
+
+EMBEDDING_API_KEY=sk-xxx
+EMBEDDING_BASE_URL=https://dashscope.aliyuncs.com/compatible-mode/v1
+```
+
+Model names and embedding-store activation are configuration choices. The authoritative defaults are in `reme/config/default.yaml`. Never commit secrets from `.env`.
+
+## Next
+
+- Connect ReMe to an agent with [Guides](/reme/0.4.0.6/en/guides).
+- Find workspace, configuration, and interface details in [Reference](/reme/0.4.0.6/en/reference).
+- Use [Support](/reme/0.4.0.6/en/support) for connection or indexing problems.

@@ -1,0 +1,115 @@
+---
+title: "参考"
+description: "ReMe 稳定的 workspace、配置、CLI、HTTP 和 MCP 契约。"
+---
+
+本页只记录用户可以依赖的稳定语义，并指向当前版本的权威接口。具体参数以运行时 schema 和源码为准。
+
+## Workspace
+
+默认 workspace 是启动目录下的 `.reme/`，可在启动时覆盖：
+
+```bash
+reme start workspace_dir=/path/to/workspace
+```
+
+| 目录 | 语义 | 用户是否应编辑 |
+|---|---|---|
+| `session/` | 原始对话和 Agent session | 通常只读 |
+| `resource/` | 导入的原始资料 | 可以添加、替换或删除 |
+| `daily/` | 按日期组织的当日记录和浅加工结果 | 可以检查和修正 |
+| `digest/` | 可长期复用的个人事实、流程与知识 | 主要人工编辑入口 |
+| `metadata/` | 索引、图谱、catalog 等派生状态 | 不应手工编辑 |
+
+`metadata/` 可以从用户文件重建，不应被当作唯一记忆来源。备份时至少保留 `session/`、`resource/`、`daily/` 和 `digest/`。
+
+## Markdown 记忆
+
+记忆文件使用普通 Markdown，可带 YAML frontmatter：
+
+```markdown
+---
+name: Build checks
+description: 提交代码前的检查约定
+---
+
+# Build checks
+
+提交前运行 pytest。相关背景见 [[daily/2026-07-13/session-42.md]]。
+```
+
+- 路径始终相对于 workspace；读写命令只接受 workspace 内路径。
+- `.md` 可以省略，ReMe 会在需要时补全。
+- `[[path/to/file.md]]` 表示 workspace 内的 wikilink。
+- frontmatter 的 `name` 和 `description` 是常用摘要字段；其他元数据是否稳定，应以 schema 和实际写入工具为准。
+- 移动或删除带链接的文件时优先使用 ReMe 的 `move` / `delete` action，以便检查相关链接。
+
+## 配置
+
+ReMe 从内置 `default` 配置开始，再合并配置文件和命令行点号覆盖：
+
+```bash
+reme start config=/path/to/config.yaml service.port=8181
+```
+
+常用顶层配置包括：
+
+| 配置 | 含义 |
+|---|---|
+| `workspace_dir` | workspace 根目录 |
+| `timezone` | daily 和定时任务使用的时区 |
+| `service.backend` | `http` 或 `mcp` |
+| `service.host` / `service.port` | 服务监听地址 |
+| `service.transport` | MCP transport |
+| `jobs` | 后台、定时和公开 action |
+| `components` | LLM、embedding、存储和图谱实现 |
+
+字符串中的 `${VAR}` 和 `${VAR:-default}` 会从环境变量展开。包含密钥的配置和 `.env` 不应提交到版本库。
+
+权威配置来源：
+
+- [`reme/config/default.yaml`](https://github.com/agentscope-ai/ReMe/blob/main/reme/config/default.yaml)：默认 job、组件和参数；
+- [`reme/schema/application_config.py`](https://github.com/agentscope-ai/ReMe/blob/main/reme/schema/application_config.py)：顶层配置结构；
+- [`reme/config/config_parser.py`](https://github.com/agentscope-ai/ReMe/blob/main/reme/config/config_parser.py)：合并、点号覆盖和环境变量规则。
+
+## CLI
+
+CLI 形式统一为：
+
+```text
+reme <action> key=value nested.key=value
+```
+
+常用入口：
+
+```bash
+reme help          # 当前服务公开的 action
+reme version       # 版本
+reme health_check  # 组件状态
+reme find_reme     # 定位运行中的 ReMe 进程
+reme reindex       # 清理并重建文件索引
+```
+
+`start` 之外的 action 会连接正在运行的服务。运行时 `reme help` 和 `reme/config/default.yaml` 是 action 与参数的权威清单。
+
+## HTTP 与 MCP
+
+默认 HTTP 服务将公开 job 暴露为 `POST /{action}`。服务运行后访问：
+
+- `/docs`：交互式 OpenAPI 页面；
+- `/openapi.json`：机器可读 schema。
+
+MCP 服务通过以下方式启动：
+
+```bash
+reme start service.backend=mcp service.transport=streamable-http
+```
+
+默认 MCP URL 为 `http://127.0.0.1:2333/mcp`。工具清单由 MCP 客户端在连接时自动发现。
+
+## 兼容性与变更
+
+- Python 要求和依赖范围以 [`pyproject.toml`](https://github.com/agentscope-ai/ReMe/blob/main/pyproject.toml) 为准。
+- 请求、响应和持久化结构以 [`reme/schema/`](https://github.com/agentscope-ai/ReMe/tree/main/reme/schema) 为准。
+- 行为边界以 [`tests/`](https://github.com/agentscope-ai/ReMe/tree/main/tests) 为准。
+- 版本变化见 [GitHub Releases](https://github.com/agentscope-ai/ReMe/releases)。
