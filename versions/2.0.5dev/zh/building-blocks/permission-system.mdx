@@ -41,6 +41,15 @@ sequenceDiagram
     end
 ```
 
+每个 mode 都遵循**同一套固定的六步评估骨架**，按优先级顺序执行。各 mode 之间的差异仅在于哪些步骤生效，以及最终的兜底行为：
+
+1. **Deny 规则 → DENY** —— 在每个 mode 下都是最高优先级。
+2. **Ask 规则 → ASK** —— 命中的 ask 规则会提示用户（在 `DONT_ASK` 下转为 DENY，因为没有用户可以回答）。
+3. **只读快速通道 → ALLOW** —— 如果本次调用在事实上是只读的（`check_read_only(tool_input)`），就自动放行。在**所有** mode 下都生效，包括 `DEFAULT`。该判定是逐次调用的，而非静态的工具标记（`git status` 是只读，写文件的 Bash 命令不是）。被标记为命令注入风险的 Bash 命令**不**视为只读，会落到工具的 safety 检查上。
+4. **工具 `check_permissions` → ALLOW / DENY / safety ASK / PASSTHROUGH** —— 工具检查本次调用。bypass-immune 的 safety ASK 无法被 allow 规则静默。针对编辑操作的**工作目录自动放行**在这一步发生，且在 `ACCEPT_EDITS` 与 `DONT_ASK` 下生效。
+5. **Allow 规则 → ALLOW** —— 命中的 allow 规则放行，除非第 4 步已经触发了 safety ASK。
+6. **Mode 兜底** —— 如果以上都没有决断：`DEFAULT` → ASK，`ACCEPT_EDITS` → ASK，`EXPLORE` → DENY，`BYPASS` → ALLOW，`DONT_ASK` → DENY。
+
 下面是各 mode 下的决策流程。ASK 结果会触发用户确认；如果用户接受自动生成的 suggested rule，规则会被持久化以供后续调用使用。
 
 <Tabs>
@@ -51,13 +60,15 @@ flowchart TD
     D1 -->|Match| DENY([DENY])
     D1 -->|No| D2{Ask Rules?}
     D2 -->|Match| ASK([ASK])
-    D2 -->|No| D3[Tool check_permissions]
-    D3 -->|ALLOW| ALLOW([ALLOW])
-    D3 -->|DENY| DENY
-    D3 -->|"Safety ASK (bypass_immune)"| ASK
-    D3 -->|PASSTHROUGH / other ASK| D4{Allow Rules?}
-    D4 -->|Match| ALLOW
-    D4 -->|No| ASK
+    D2 -->|No| D3{check_read_only?}
+    D3 -->|True| ALLOW([ALLOW])
+    D3 -->|False| D4[Tool check_permissions]
+    D4 -->|ALLOW| ALLOW
+    D4 -->|DENY| DENY
+    D4 -->|"Safety ASK (bypass_immune)"| ASK
+    D4 -->|PASSTHROUGH / other ASK| D5{Allow Rules?}
+    D5 -->|Match| ALLOW
+    D5 -->|No| ASK
     style DENY fill:#ff6b6b,color:#fff
     style ALLOW fill:#51cf66,color:#fff
     style ASK fill:#ffd43b,color:#333
@@ -106,11 +117,13 @@ flowchart TD
     B1 -->|Match| DENY([DENY])
     B1 -->|No| B2{Ask Rules?}
     B2 -->|Match| ASK([ASK])
-    B2 -->|No| B3[Tool check_permissions]
-    B3 -->|ALLOW| ALLOW([ALLOW])
-    B3 -->|DENY| DENY
-    B3 -->|"Any ASK (safety ignored) / PASSTHROUGH"| B4{Allow Rules?}
-    B4 -->|Match or No| ALLOW
+    B2 -->|No| B3{check_read_only?}
+    B3 -->|True| ALLOW([ALLOW])
+    B3 -->|False| B4[Tool check_permissions]
+    B4 -->|ALLOW| ALLOW
+    B4 -->|DENY| DENY
+    B4 -->|"Any ASK (safety ignored) / PASSTHROUGH"| B5{Allow Rules?}
+    B5 -->|Match or No| ALLOW
     style DENY fill:#ff6b6b,color:#fff
     style ALLOW fill:#51cf66,color:#fff
     style ASK fill:#ffd43b,color:#333
@@ -123,13 +136,15 @@ flowchart TD
     DA1 -->|Match| DENY([DENY])
     DA1 -->|No| DA2{Ask Rules?}
     DA2 -->|Match| DENY
-    DA2 -->|No| DA3[Tool check_permissions]
-    DA3 -->|ALLOW| ALLOW([ALLOW])
-    DA3 -->|DENY| DENY
-    DA3 -->|"Any ASK (incl. safety)"| DENY
-    DA3 -->|PASSTHROUGH| DA4{Allow Rules?}
-    DA4 -->|Match| ALLOW
-    DA4 -->|No| DENY
+    DA2 -->|No| DA3{check_read_only?}
+    DA3 -->|True| ALLOW([ALLOW])
+    DA3 -->|False| DA4[Tool check_permissions]
+    DA4 -->|ALLOW| ALLOW
+    DA4 -->|DENY| DENY
+    DA4 -->|"Any ASK (incl. safety)"| DENY
+    DA4 -->|PASSTHROUGH| DA5{Allow Rules?}
+    DA5 -->|Match| ALLOW
+    DA5 -->|No| DENY
     style DENY fill:#ff6b6b,color:#fff
     style ALLOW fill:#51cf66,color:#fff
 ```
@@ -148,11 +163,11 @@ AgentScope 支持以下模式，分别适配不同的部署场景：
 
 | Mode | 行为 | 适用场景 |
 |------|------|----------|
-| `DEFAULT` | 所有操作都需要显式规则或用户确认。唯一的内置自动放行路径是 `Bash` 识别只读命令（`ls`、`git status`、`cat` 等）后返回 ALLOW。`Read` / `Glob` / `Grep` 返回 PASSTHROUGH，命中不到 allow 规则仍然会 ASK | 最安全，推荐默认值 |
-| `ACCEPT_EDITS` | 自动放行工作目录内的文件操作；Bash filesystem 命令（`mkdir`/`touch`/`rm`/`cp`/`mv`/`sed`）**仅当所有目标路径都在某个工作目录内**才自动放行 | 用户在场的活跃开发 |
-| `EXPLORE` | 只读：放行 read-only 工具与只读 Bash 命令（`ls`、`git status`、`cat` 等）；拒绝任何修改。用户配置的 DENY / ASK 规则优先级高于只读自动放行 | 代码探索、规划 |
-| `BYPASS` | 跳过所有权限检查，**除了** deny / ask 规则与工具自身的 DENY。**工具的 safety ASK 不会被强制**（`rm -rf /`、写入 `~/.bashrc`、命令注入等都会放行）。请用 deny 规则保护具体路径 | 沙箱环境或完全可信的运行 |
-| `DONT_ASK` | 把所有 ASK（默认 ASK、ASK 规则、**以及** safety ASK）转为 DENY；非交互式运行下默认安全 | 无人值守 / 计划任务 |
+| `DEFAULT` | 只读调用自动放行（`Read` / `Glob` / `Grep`，以及 `ls`、`git status`、`cat` 等只读 Bash 命令）；其余操作在命中不到 allow 规则时都会提示确认。safety ASK 无法被 allow 规则覆盖 | 最安全，推荐默认值 |
+| `ACCEPT_EDITS` | `DEFAULT` 放行的一切，**外加**工作目录内的编辑操作无需提示即自动放行：对已配置工作目录下文件的 `Write` / `Edit`，以及 Bash filesystem 命令（`mkdir`/`touch`/`rm`/`cp`/`mv`/`sed`）**在所有目标路径都在某个工作目录内时** | 用户在场的活跃开发 |
+| `EXPLORE` | 放行只读操作；拒绝任何修改。不咨询 allow 规则与工具的 safety 检查 —— 只读保证不能被规则放行掉。用户配置的 DENY / ASK 规则仍然优先于只读自动放行 | 代码探索、规划 |
+| `BYPASS` | 完全可信：deny / ask 规则与工具的 DENY 仍然生效，但**工具的 safety ASK 会被跳过**（`rm -rf /`、写入 `~/.bashrc`、命令注入等都会放行），其余一切均放行。请用 deny 规则保护具体路径 | 沙箱环境或完全可信的运行 |
+| `DONT_ASK` | `ACCEPT_EDITS` 的无人值守版本：只读自动放行、工作目录内编辑自动放行，但任何原本会提示（不在场的）用户的操作都被转为 **DENY** 而非询问。永不返回 ASK | 无人值守 / 计划任务 |
 
 可以在创建 agent 时通过 `AgentState.permission_context` 设置 mode，也可以在运行时更新：
 
@@ -324,9 +339,9 @@ result = UserConfirmResultEvent(
 
 每个 tool 都实现了一个 `check_permissions()` 方法，在运行时基于真实调用入参执行检查。AgentScope 内置工具覆盖三类检查：
 
-- **危险路径保护** —— `Write`、`Edit`、`Bash` 检查目标文件或命令是否触及敏感路径。返回一个 bypass-immune 的 safety ASK，在 `DEFAULT`/`ACCEPT_EDITS`/`DONT_ASK` 下被尊重（allow 规则无法静默）。`BYPASS` 模式按设计跳过。
-- **只读命令检测** —— `Bash` 解析命令字符串识别只读操作，在**所有 mode**（包括 `DEFAULT`）下自动放行。对于像 `Bash` 这种结果依赖于输入的工具，这一判定通过 `check_read_only()` 方法暴露（详见下文）。
-- **ACCEPT_EDITS 模式** —— `Write` 与 `Edit` 自动放行已配置工作目录内的文件操作。`Bash` 额外要求 filesystem 命令（`mkdir`/`touch`/`rm`/`cp`/`mv`/`sed` 等）的**所有**目标路径都在某个工作目录内。
+- **危险路径保护** —— `Write`、`Edit`、`Bash` 检查目标文件或命令是否触及敏感路径。返回一个 bypass-immune 的 safety ASK，在 `DEFAULT`/`ACCEPT_EDITS` 下被尊重（allow 规则无法静默），在 `DONT_ASK` 下转为 DENY。`BYPASS` 模式按设计跳过。
+- **只读命令检测** —— 只读快速通道解析每一次调用，在**所有 mode**（包括 `DEFAULT`）下自动放行。对于像 `Bash` 这种结果依赖于输入的工具，这一判定通过 `check_read_only()` 方法暴露（详见下文）：`ls` / `git status` / `cat` 是只读，但被标记为命令注入风险的 Bash 命令（如 `ls $(rm -rf /)`）**不**视为只读，会转而落到工具的 safety 检查上。
+- **工作目录自动放行** —— 在 `ACCEPT_EDITS` 与 `DONT_ASK` 下，`Write` 与 `Edit` 自动放行已配置工作目录内的文件操作。`Bash` 额外要求 filesystem 命令（`mkdir`/`touch`/`rm`/`cp`/`mv`/`sed` 等）的**所有**目标路径都在某个工作目录内。该自动放行始终从属于上面的 safety 检查 —— 工作目录内的危险操作仍会 ASK / DENY。
 
 ### 自定义 tool
 
@@ -346,8 +361,8 @@ class MyTool(ToolBase):
         """可选：动态只读判定。
 
         默认返回 self.is_read_only。当某次调用是否修改状态取决于
-        输入时进行重写。引擎用它来决定在 EXPLORE 和 ACCEPT_EDITS
-        模式下是否自动放行。
+        输入时进行重写。引擎在每个 mode 下都会用它执行只读快速通道
+        （即在 check_permissions 之前运行的自动放行）。
         """
         return tool_input.get("operation") in {"list", "describe", "get"}
 
@@ -393,7 +408,7 @@ class MyTool(ToolBase):
 
 ### 只读命令
 
-常见的只读 bash 命令在没有任何规则的情况下也会被自动放行，在**所有 mode**（包括 `DEFAULT`）下都生效。复合命令（`&&`、`||`、`;`、`|`）只有在**所有**子命令都只读时才视为只读。输出重定向（`>`、`>>`）会让命令立即失去只读属性。
+常见的只读 bash 命令在没有任何规则的情况下也会被自动放行，在**所有 mode**（包括 `DEFAULT`）下都生效。复合命令（`&&`、`||`、`;`、`|`）只有在**所有**子命令都只读时才视为只读。输出重定向（`>`、`>>`）会让命令立即失去只读属性。被标记为命令注入风险的命令（如 `ls $(rm -rf /)`）**不**视为只读，因此不会在此自动放行 —— 它会落到工具的 safety 检查上。
 
 <AccordionGroup>
   <Accordion title="完整只读命令列表">

@@ -41,6 +41,15 @@ sequenceDiagram
     end
 ```
 
+Every mode follows the **same fixed six-step evaluation skeleton**, in priority order. What differs between modes is only which steps are active and the final fallback:
+
+1. **Deny rules → DENY** — highest priority in every mode.
+2. **Ask rules → ASK** — a matching ask rule prompts the user (converted to DENY in `DONT_ASK`, where no user is available to answer).
+3. **Read-only fast path → ALLOW** — if the specific invocation is factually read-only (`check_read_only(tool_input)`), it is auto-allowed. Active in **every** mode, including `DEFAULT`. The check is per-invocation, not a static tool flag (`git status` is read-only, a Bash command that writes files is not). A Bash command flagged with command-injection risk is **not** treated as read-only, so it falls through to the tool's safety check.
+4. **Tool `check_permissions` → ALLOW / DENY / safety ASK / PASSTHROUGH** — the tool inspects the invocation. A bypass-immune safety ASK cannot be silenced by allow rules. **Working-directory auto-allow** for edits happens here and is active in `ACCEPT_EDITS` and `DONT_ASK`.
+5. **Allow rules → ALLOW** — a matching allow rule allows, unless a safety ASK already fired in step 4.
+6. **Mode fallback** — if nothing above resolved the call: `DEFAULT` → ASK, `ACCEPT_EDITS` → ASK, `EXPLORE` → DENY, `BYPASS` → ALLOW, `DONT_ASK` → DENY.
+
 Below is the decision flow for each mode. ASK outcomes trigger user confirmation; if the user accepts the auto-generated suggested rule, it is persisted for future calls.
 
 <Tabs>
@@ -51,13 +60,15 @@ flowchart TD
     D1 -->|Match| DENY([DENY])
     D1 -->|No| D2{Ask Rules?}
     D2 -->|Match| ASK([ASK])
-    D2 -->|No| D3[Tool check_permissions]
-    D3 -->|ALLOW| ALLOW([ALLOW])
-    D3 -->|DENY| DENY
-    D3 -->|"Safety ASK (bypass_immune)"| ASK
-    D3 -->|PASSTHROUGH / other ASK| D4{Allow Rules?}
-    D4 -->|Match| ALLOW
-    D4 -->|No| ASK
+    D2 -->|No| D3{check_read_only?}
+    D3 -->|True| ALLOW([ALLOW])
+    D3 -->|False| D4[Tool check_permissions]
+    D4 -->|ALLOW| ALLOW
+    D4 -->|DENY| DENY
+    D4 -->|"Safety ASK (bypass_immune)"| ASK
+    D4 -->|PASSTHROUGH / other ASK| D5{Allow Rules?}
+    D5 -->|Match| ALLOW
+    D5 -->|No| ASK
     style DENY fill:#ff6b6b,color:#fff
     style ALLOW fill:#51cf66,color:#fff
     style ASK fill:#ffd43b,color:#333
@@ -106,11 +117,13 @@ flowchart TD
     B1 -->|Match| DENY([DENY])
     B1 -->|No| B2{Ask Rules?}
     B2 -->|Match| ASK([ASK])
-    B2 -->|No| B3[Tool check_permissions]
-    B3 -->|ALLOW| ALLOW([ALLOW])
-    B3 -->|DENY| DENY
-    B3 -->|"Any ASK (safety ignored) / PASSTHROUGH"| B4{Allow Rules?}
-    B4 -->|Match or No| ALLOW
+    B2 -->|No| B3{check_read_only?}
+    B3 -->|True| ALLOW([ALLOW])
+    B3 -->|False| B4[Tool check_permissions]
+    B4 -->|ALLOW| ALLOW
+    B4 -->|DENY| DENY
+    B4 -->|"Any ASK (safety ignored) / PASSTHROUGH"| B5{Allow Rules?}
+    B5 -->|Match or No| ALLOW
     style DENY fill:#ff6b6b,color:#fff
     style ALLOW fill:#51cf66,color:#fff
     style ASK fill:#ffd43b,color:#333
@@ -123,13 +136,15 @@ flowchart TD
     DA1 -->|Match| DENY([DENY])
     DA1 -->|No| DA2{Ask Rules?}
     DA2 -->|Match| DENY
-    DA2 -->|No| DA3[Tool check_permissions]
-    DA3 -->|ALLOW| ALLOW([ALLOW])
-    DA3 -->|DENY| DENY
-    DA3 -->|"Any ASK (incl. safety)"| DENY
-    DA3 -->|PASSTHROUGH| DA4{Allow Rules?}
-    DA4 -->|Match| ALLOW
-    DA4 -->|No| DENY
+    DA2 -->|No| DA3{check_read_only?}
+    DA3 -->|True| ALLOW([ALLOW])
+    DA3 -->|False| DA4[Tool check_permissions]
+    DA4 -->|ALLOW| ALLOW
+    DA4 -->|DENY| DENY
+    DA4 -->|"Any ASK (incl. safety)"| DENY
+    DA4 -->|PASSTHROUGH| DA5{Allow Rules?}
+    DA5 -->|Match| ALLOW
+    DA5 -->|No| DENY
     style DENY fill:#ff6b6b,color:#fff
     style ALLOW fill:#51cf66,color:#fff
 ```
@@ -148,11 +163,11 @@ AgentScope supports the following modes, each suited to a different deployment s
 
 | Mode | Behavior | Use Case |
 |------|----------|----------|
-| `DEFAULT` | All ops require explicit rules or user confirmation. The only built-in auto-allow is `Bash` recognizing read-only commands (`ls`, `git status`, `cat`, ...) and returning ALLOW. `Read` / `Glob` / `Grep` return PASSTHROUGH and still ASK unless an allow rule matches | Most secure, recommended default |
-| `ACCEPT_EDITS` | Auto-allow file ops in working directories; auto-allow Bash filesystem commands (`mkdir`/`touch`/`rm`/`cp`/`mv`/`sed`) **only when every target path resolves inside a working directory** | Active development with user present |
-| `EXPLORE` | Read-only: allow read-only tools and read-only Bash commands (`ls`, `git status`, `cat`, ...); deny modifications. User-configured DENY/ASK rules take precedence over the read-only auto-allow | Code exploration, planning |
-| `BYPASS` | Skip all permission checks **except** deny/ask rules and tool DENY. **Tool safety ASKs are NOT enforced** (`rm -rf /`, writes to `~/.bashrc`, command injection, etc. all pass through). Use deny rules to protect specific paths | Sandboxed environments or fully trusted runs |
-| `DONT_ASK` | Convert every ASK (default, ASK rules, **and** safety ASKs) to DENY; safe-by-default for non-interactive runs | Unattended / scheduled execution |
+| `DEFAULT` | Read-only invocations are auto-allowed (`Read` / `Glob` / `Grep`, and read-only Bash commands like `ls`, `git status`, `cat`, ...); everything else prompts unless an allow rule matches. Safety ASKs cannot be overridden by allow rules | Most secure, recommended default |
+| `ACCEPT_EDITS` | Everything `DEFAULT` allows, **plus** edits within a working directory are auto-allowed without prompting: `Write` / `Edit` on files under a configured working directory, and Bash filesystem commands (`mkdir`/`touch`/`rm`/`cp`/`mv`/`sed`) **when every target path resolves inside a working directory** | Active development with user present |
+| `EXPLORE` | Read-only operations allowed; all modifications denied. Allow rules and the tool's safety checks are not consulted — the read-only guarantee cannot be granted away by a rule. User-configured DENY/ASK rules still take precedence over the read-only auto-allow | Code exploration, planning |
+| `BYPASS` | Fully trusted: deny/ask rules and tool DENYs still apply, but **tool safety ASKs are skipped** (`rm -rf /`, writes to `~/.bashrc`, command injection, etc. all pass through) and everything else is allowed. Use deny rules to protect specific paths | Sandboxed environments or fully trusted runs |
+| `DONT_ASK` | The unattended counterpart of `ACCEPT_EDITS`: read-only auto-allowed, working-directory edits auto-allowed, but anything that would otherwise prompt the (absent) user is **DENIED** instead of asked. Never returns ASK | Unattended / scheduled execution |
 
 Set the mode via `AgentState.permission_context` when creating the agent, or update it at runtime.
 
@@ -324,9 +339,9 @@ result = UserConfirmResultEvent(
 
 Each tool implements a `check_permissions()` method that runs against the actual call inputs at runtime. AgentScope's built-in tools cover three areas:
 
-- **Dangerous path protection** — `Write`, `Edit`, and `Bash` check whether the target file or command touches sensitive paths. Returns a bypass-immune safety ASK that is honored in `DEFAULT`/`ACCEPT_EDITS`/`DONT_ASK` (allow rules cannot silence it). `BYPASS` mode skips it on purpose.
-- **Read-only command detection** — `Bash` parses the command string to detect read-only operations and auto-allows them in **every** mode (including `DEFAULT`). For input-dependent tools like `Bash`, this is exposed via the `check_read_only()` method (see below).
-- **ACCEPT_EDITS mode** — `Write` and `Edit` auto-allow operations on files within configured working directories. `Bash` additionally requires that **every** target path of a filesystem command (`mkdir`/`touch`/`rm`/`cp`/`mv`/`sed`, ...) resolves inside a working directory.
+- **Dangerous path protection** — `Write`, `Edit`, and `Bash` check whether the target file or command touches sensitive paths. Returns a bypass-immune safety ASK that is honored in `DEFAULT`/`ACCEPT_EDITS` (allow rules cannot silence it) and converted to DENY in `DONT_ASK`. `BYPASS` mode skips it on purpose.
+- **Read-only command detection** — the read-only fast path parses each invocation and auto-allows it in **every** mode (including `DEFAULT`). For input-dependent tools like `Bash`, this is exposed via the `check_read_only()` method (see below): `ls` / `git status` / `cat` are read-only, but a Bash command flagged with command-injection risk (e.g. `ls $(rm -rf /)`) is **not** treated as read-only and instead falls through to the tool's safety check.
+- **Working-directory auto-allow** — in `ACCEPT_EDITS` and `DONT_ASK`, `Write` and `Edit` auto-allow operations on files within configured working directories. `Bash` additionally requires that **every** target path of a filesystem command (`mkdir`/`touch`/`rm`/`cp`/`mv`/`sed`, ...) resolves inside a working directory. This auto-allow is always subordinate to the safety checks above — a dangerous op inside a working directory still ASKs/DENYs.
 
 ### Custom tools
 
@@ -347,7 +362,8 @@ class MyTool(ToolBase):
 
         Defaults to returning self.is_read_only. Override when whether
         an invocation modifies state depends on the input. The engine
-        calls this to decide auto-allow in EXPLORE and ACCEPT_EDITS.
+        calls this for the read-only fast path in every mode (the
+        auto-allow that runs before check_permissions).
         """
         return tool_input.get("operation") in {"list", "describe", "get"}
 
@@ -393,7 +409,7 @@ A regular ASK (`bypass_immune=False`, the default) can be overridden by a matchi
 
 ### Read-Only Commands
 
-Common read-only bash commands are auto-allowed without any rules, in **every mode** (including `DEFAULT`). A compound command (`&&`, `||`, `;`, `|`) is read-only only if **all** subcommands are read-only. Output redirections (`>`, `>>`) always make a command non-read-only.
+Common read-only bash commands are auto-allowed without any rules, in **every mode** (including `DEFAULT`). A compound command (`&&`, `||`, `;`, `|`) is read-only only if **all** subcommands are read-only. Output redirections (`>`, `>>`) always make a command non-read-only. A command flagged with command-injection risk (e.g. `ls $(rm -rf /)`) is **not** treated as read-only, so it is not auto-allowed here — it falls through to the tool's safety check.
 
 <AccordionGroup>
   <Accordion title="Full read-only command list">
