@@ -582,9 +582,11 @@ To add a new model under an existing provider, drop a YAML file alongside the ot
 
 ### Storage backend
 
-The `StorageBase` abstract class defines the persistence contract for agents, sessions, credentials, messages, schedules, teams, and knowledge base records. AgentScope ships with `RedisStorage` as the built-in implementation:
+The `StorageBase` abstract class defines the persistence contract for agents, sessions, credentials, messages, schedules, teams, and knowledge base records. AgentScope ships with two built-in implementations — `RedisStorage` (the default, used by every example above) and `AsyncSQLAlchemyStorage`.
 
-```python
+<CodeGroup>
+
+```python Redis
 from agentscope.app.storage import RedisStorage
 
 storage = RedisStorage(
@@ -595,7 +597,44 @@ storage = RedisStorage(
 )
 ```
 
-To use another database, implement the same interface:
+```python SQL (SQLAlchemy)
+from agentscope.app.storage import AsyncSQLAlchemyStorage
+
+# Any SQLAlchemy async URL — driver installed separately (see below).
+storage = AsyncSQLAlchemyStorage(
+    "postgresql+asyncpg://user:password@localhost/agentscope",
+)
+```
+
+</CodeGroup>
+
+`AsyncSQLAlchemyStorage` persists to any database SQLAlchemy's async engine supports (SQLite, PostgreSQL, MySQL, …). It is imported lazily, so `import agentscope.app.storage` stays cheap and never requires SQLAlchemy unless you actually reference this class; the backend opens its connection pool on `__aenter__` and disposes it on shutdown.
+
+It lives behind the optional `sql` extra, which pulls in SQLAlchemy and Alembic but **not** a driver — install the async driver that matches your database yourself:
+
+```bash
+pip install "agentscope[sql]"
+pip install aiosqlite          # SQLite
+# pip install asyncpg          # PostgreSQL
+# pip install asyncmy          # MySQL
+```
+
+By default (`create_tables=True`) the backend runs `CREATE TABLE IF NOT EXISTS` for any missing tables at startup — convenient for tests and single-node dev deployments. For production, manage the schema with the packaged Alembic migrations instead:
+
+<ParamField path="create_tables" type="bool" default="True">
+  Create any missing tables at `__aenter__`. Idempotent (existing tables are left untouched). Turn it off when Alembic owns the schema.
+</ParamField>
+<ParamField path="auto_migrate" type="bool" default="False">
+  Run `alembic upgrade head` against the packaged migration scripts at `__aenter__`. Handy for single-node or dev deployments where every boot brings the schema up to date. **Not recommended for multi-replica production** — two replicas racing on the same migration is unsafe; keep it `False` and run `alembic upgrade head` as a discrete deploy step.
+</ParamField>
+<ParamField path="engine" type="AsyncEngine | None" default="None">
+  An externally managed async engine to use as-is. When supplied it is **not** disposed on shutdown — the caller owns its lifecycle. When omitted, an engine is built from the URL on `__aenter__` and disposed on shutdown.
+</ParamField>
+<ParamField path="engine_kwargs" type="dict | None" default="None">
+  Extra keyword arguments forwarded to `create_async_engine` when the engine is constructed internally (e.g. `pool_size`, `echo`).
+</ParamField>
+
+To use a database that neither backend covers, implement the same interface:
 
 ```python
 from agentscope.app.storage import StorageBase

@@ -581,9 +581,11 @@ parameter_overrides:
 
 ### 存储后端
 
-`StorageBase` 抽象类定义了智能体、会话、凭证、消息、调度、团队与知识库记录的持久化契约。AgentScope 内置 `RedisStorage` 实现：
+`StorageBase` 抽象类定义了智能体、会话、凭证、消息、调度、团队与知识库记录的持久化契约。AgentScope 内置两种实现 —— `RedisStorage`（默认，上面所有示例都在用）与 `AsyncSQLAlchemyStorage`。
 
-```python
+<CodeGroup>
+
+```python Redis
 from agentscope.app.storage import RedisStorage
 
 storage = RedisStorage(
@@ -594,7 +596,44 @@ storage = RedisStorage(
 )
 ```
 
-要换用其他数据库，实现同一接口即可：
+```python SQL（SQLAlchemy）
+from agentscope.app.storage import AsyncSQLAlchemyStorage
+
+# 任意 SQLAlchemy async URL —— 驱动需单独安装（见下文）。
+storage = AsyncSQLAlchemyStorage(
+    "postgresql+asyncpg://user:password@localhost/agentscope",
+)
+```
+
+</CodeGroup>
+
+`AsyncSQLAlchemyStorage` 可持久化到 SQLAlchemy async 引擎支持的任意数据库（SQLite、PostgreSQL、MySQL……）。它是**懒加载**的 —— 只要不引用这个类，`import agentscope.app.storage` 就依然轻量、不会触发 SQLAlchemy 导入；连接池在 `__aenter__` 打开、在 shutdown 释放。
+
+它位于可选的 `sql` extra 之后，该 extra 只引入 SQLAlchemy 与 Alembic，**不含驱动** —— 请自行安装与所用数据库匹配的 async 驱动：
+
+```bash
+pip install "agentscope[sql]"
+pip install aiosqlite          # SQLite
+# pip install asyncpg          # PostgreSQL
+# pip install asyncmy          # MySQL
+```
+
+默认情况下（`create_tables=True`），后端会在启动时为缺失的表执行 `CREATE TABLE IF NOT EXISTS` —— 便于测试与单节点开发部署。生产环境请改用随包提供的 Alembic 迁移来管理 schema：
+
+<ParamField path="create_tables" type="bool" default="True">
+  在 `__aenter__` 时创建缺失的表。幂等（已存在的表不受影响）。当由 Alembic 管理 schema 时关闭它。
+</ParamField>
+<ParamField path="auto_migrate" type="bool" default="False">
+  在 `__aenter__` 时对随包提供的迁移脚本执行 `alembic upgrade head`。适合单节点或开发部署 —— 每次启动都会把 schema 升级到最新。**不建议用于多副本生产** —— 两个副本同时抢跑同一迁移并不安全；此时请保持 `False`，并把 `alembic upgrade head` 作为独立的部署步骤执行。
+</ParamField>
+<ParamField path="engine" type="AsyncEngine | None" default="None">
+  外部托管、原样使用的 async 引擎。传入时它**不会**在 shutdown 时被释放 —— 由调用方负责其生命周期。省略时，引擎会在 `__aenter__` 时依据 URL 构造，并在 shutdown 时释放。
+</ParamField>
+<ParamField path="engine_kwargs" type="dict | None" default="None">
+  当引擎由内部构造时，转发给 `create_async_engine` 的额外关键字参数（如 `pool_size`、`echo`）。
+</ParamField>
+
+要换用以上两种后端都未覆盖的数据库，实现同一接口即可：
 
 ```python
 from agentscope.app.storage import StorageBase
