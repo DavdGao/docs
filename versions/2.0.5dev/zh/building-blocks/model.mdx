@@ -17,6 +17,7 @@ AgentScope 的模型层由 API 凭证（Credential）和模型族组成。一个
     </Tree.Folder>
     <Tree.Folder name="TTSModelBase" defaultOpen>
       <Tree.File name="OpenAITTSModel" />
+      <Tree.File name="GeminiTTSModel" />
       <Tree.File name="DashScopeTTSModel" />
       <Tree.File name="DashScopeRealtimeTTSModel" />
       <Tree.File name="DashScopeCosyVoiceRealtimeTTSModel" />
@@ -449,6 +450,7 @@ cards = model_cls.list_models()                          # -> list[ModelCard]
 | 提供商 | 模型类 | 说明 |
 |--------|--------|------|
 | OpenAI | `OpenAITTSModel` | tts-1、tts-1-hd、gpt-4o-mini-tts；多种音色；可配置输出格式（mp3、wav、opus 等） |
+| Gemini | `GeminiTTSModel` | gemini-2.5-flash-preview-tts、gemini-2.5-pro-preview-tts；30 种预设音色；流式输出 |
 | DashScope | `DashScopeTTSModel` | Qwen3-TTS，多种音色，流式输出 |
 | DashScope (Realtime) | `DashScopeRealtimeTTSModel` | Qwen3-TTS WebSocket 流式输入，适合对接 LLM 流式输出 |
 | DashScope (CosyVoice) | `DashScopeCosyVoiceTTSModel` | CosyVoice-v3，支持标准与实时（流式输入）两种模式；cosyvoice-v3-flash/plus |
@@ -467,6 +469,19 @@ tts = OpenAITTSModel(
     credential=OpenAICredential(api_key=os.environ["OPENAI_API_KEY"]),
     model="tts-1",
     parameters=OpenAITTSModel.Parameters(voice="alloy", response_format="mp3"),
+    stream=True,
+)
+```
+
+```python Gemini
+import os
+from agentscope.tts import GeminiTTSModel
+from agentscope.credential import GeminiCredential
+
+tts = GeminiTTSModel(
+    credential=GeminiCredential(api_key=os.environ["GEMINI_API_KEY"]),
+    model="gemini-2.5-flash-preview-tts",
+    parameters=GeminiTTSModel.Parameters(voice="Kore"),
     stream=True,
 )
 ```
@@ -587,6 +602,28 @@ async def main():
     async for chunk in await tts.synthesize("你好，世界！"):
         if chunk.content:
             # chunk.content 是包含 base64 编码 audio/mpeg 数据的 DataBlock
+            print(f"音频 chunk: {len(chunk.content.source.data)} bytes")
+
+asyncio.run(main())
+```
+
+```python Gemini
+import asyncio
+import os
+from agentscope.tts import GeminiTTSModel
+from agentscope.credential import GeminiCredential
+
+async def main():
+    tts = GeminiTTSModel(
+        credential=GeminiCredential(api_key=os.environ["GEMINI_API_KEY"]),
+        model="gemini-2.5-flash-preview-tts",
+        parameters=GeminiTTSModel.Parameters(voice="Kore"),
+        stream=True,
+    )
+
+    async for chunk in await tts.synthesize("你好，世界！"):
+        if chunk.content:
+            # chunk.content 是包含 base64 编码 audio/wav 数据的 DataBlock
             print(f"音频 chunk: {len(chunk.content.source.data)} bytes")
 
 asyncio.run(main())
@@ -734,6 +771,26 @@ parameter_overrides:
     hidden: true
 ```
 
+```yaml Gemini TTS
+name: gemini-2.5-flash-preview-tts
+label: Gemini 2.5 Flash Preview TTS
+status: active
+input_types:
+  - text/plain
+output_types:
+  - audio/wav
+voices:
+  - Zephyr
+  - Puck
+  - Charon
+  - Kore
+  - Fenrir
+  - Leda
+  - Orus
+  - Aoede
+parameter_overrides: {}
+```
+
 ```yaml Qwen3 TTS
 name: qwen3-tts-flash
 label: Qwen3-TTS-Flash
@@ -787,20 +844,26 @@ parameter_overrides: {}
 获取 TTS 模型卡片：
 
 ```python
-from agentscope.credential import DashScopeCredential
+from agentscope.credential import DashScopeCredential, GeminiCredential
 
 cards = DashScopeCredential.list_tts_models()
 for card in cards:
     print(f"{card.name} (realtime={card.realtime}): {card.label}")
+
+# Gemini TTS 模型卡片
+gemini_cards = GeminiCredential.list_tts_models()
 ```
 
 或直接通过模型类：
 
 ```python
-from agentscope.tts import OpenAITTSModel, DashScopeTTSModel, DashScopeCosyVoiceTTSModel
+from agentscope.tts import OpenAITTSModel, GeminiTTSModel, DashScopeTTSModel, DashScopeCosyVoiceTTSModel
 
 # OpenAI TTS 模型
 openai_cards = OpenAITTSModel.list_models()
+
+# Gemini TTS 模型
+gemini_cards = GeminiTTSModel.list_models()
 
 # Qwen3 TTS 模型
 cards = DashScopeTTSModel.list_models()

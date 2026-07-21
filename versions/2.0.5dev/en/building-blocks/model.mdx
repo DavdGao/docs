@@ -22,6 +22,7 @@ The model layer is organized as a two-tier hierarchy: a **Credential** at the to
     </Tree.Folder>
     <Tree.Folder name="TTSModelBase" defaultOpen>
       <Tree.File name="OpenAITTSModel" />
+      <Tree.File name="GeminiTTSModel" />
       <Tree.File name="DashScopeTTSModel" />
       <Tree.File name="DashScopeRealtimeTTSModel" />
       <Tree.File name="DashScopeCosyVoiceRealtimeTTSModel" />
@@ -454,6 +455,7 @@ A **TTS Model** converts text into synthesized speech audio, supporting both sta
 | Provider | Model Class | Highlights |
 |----------|-------------|------------|
 | OpenAI | `OpenAITTSModel` | tts-1, tts-1-hd, gpt-4o-mini-tts; multiple voices; configurable output format (mp3, wav, opus, …) |
+| Gemini | `GeminiTTSModel` | gemini-2.5-flash-preview-tts, gemini-2.5-pro-preview-tts; 30 prebuilt voices; streaming output |
 | DashScope | `DashScopeTTSModel` | Qwen3-TTS, multiple voices, streaming output |
 | DashScope (Realtime) | `DashScopeRealtimeTTSModel` | Qwen3-TTS WebSocket streaming input, ideal for LLM output piping |
 | DashScope (CosyVoice) | `DashScopeCosyVoiceTTSModel` | CosyVoice-v3, supports both standard and realtime (streaming-input) modes; cosyvoice-v3-flash/plus |
@@ -472,6 +474,19 @@ tts = OpenAITTSModel(
     credential=OpenAICredential(api_key=os.environ["OPENAI_API_KEY"]),
     model="tts-1",
     parameters=OpenAITTSModel.Parameters(voice="alloy", response_format="mp3"),
+    stream=True,
+)
+```
+
+```python Gemini
+import os
+from agentscope.tts import GeminiTTSModel
+from agentscope.credential import GeminiCredential
+
+tts = GeminiTTSModel(
+    credential=GeminiCredential(api_key=os.environ["GEMINI_API_KEY"]),
+    model="gemini-2.5-flash-preview-tts",
+    parameters=GeminiTTSModel.Parameters(voice="Kore"),
     stream=True,
 )
 ```
@@ -592,6 +607,28 @@ async def main():
     async for chunk in await tts.synthesize("Hello, world!"):
         if chunk.content:
             # chunk.content is a DataBlock with base64-encoded audio/mpeg
+            print(f"Audio chunk: {len(chunk.content.source.data)} bytes")
+
+asyncio.run(main())
+```
+
+```python Gemini
+import asyncio
+import os
+from agentscope.tts import GeminiTTSModel
+from agentscope.credential import GeminiCredential
+
+async def main():
+    tts = GeminiTTSModel(
+        credential=GeminiCredential(api_key=os.environ["GEMINI_API_KEY"]),
+        model="gemini-2.5-flash-preview-tts",
+        parameters=GeminiTTSModel.Parameters(voice="Kore"),
+        stream=True,
+    )
+
+    async for chunk in await tts.synthesize("Hello, world!"):
+        if chunk.content:
+            # chunk.content is a DataBlock with base64-encoded audio/wav
             print(f"Audio chunk: {len(chunk.content.source.data)} bytes")
 
 asyncio.run(main())
@@ -743,6 +780,26 @@ parameter_overrides:
     hidden: true
 ```
 
+```yaml Gemini TTS
+name: gemini-2.5-flash-preview-tts
+label: Gemini 2.5 Flash Preview TTS
+status: active
+input_types:
+  - text/plain
+output_types:
+  - audio/wav
+voices:
+  - Zephyr
+  - Puck
+  - Charon
+  - Kore
+  - Fenrir
+  - Leda
+  - Orus
+  - Aoede
+parameter_overrides: {}
+```
+
 ```yaml Qwen3 TTS
 name: qwen3-tts-flash
 label: Qwen3-TTS-Flash
@@ -796,20 +853,26 @@ The `voices` list is automatically injected into the `parameter_schema` as an en
 Retrieve TTS model cards via the credential:
 
 ```python
-from agentscope.credential import DashScopeCredential
+from agentscope.credential import DashScopeCredential, GeminiCredential
 
 cards = DashScopeCredential.list_tts_models()
 for card in cards:
     print(f"{card.name} (realtime={card.realtime}): {card.label}")
+
+# Gemini TTS model cards
+gemini_cards = GeminiCredential.list_tts_models()
 ```
 
 Or directly on the model class:
 
 ```python
-from agentscope.tts import OpenAITTSModel, DashScopeTTSModel, DashScopeCosyVoiceTTSModel
+from agentscope.tts import OpenAITTSModel, GeminiTTSModel, DashScopeTTSModel, DashScopeCosyVoiceTTSModel
 
 # OpenAI TTS models
 openai_cards = OpenAITTSModel.list_models()
+
+# Gemini TTS models
+gemini_cards = GeminiTTSModel.list_models()
 
 # Qwen3 TTS models
 cards = DashScopeTTSModel.list_models()
