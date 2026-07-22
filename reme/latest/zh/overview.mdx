@@ -1,9 +1,11 @@
 ---
 title: "概览"
-description: "了解 ReMe 的理念、适用场景和文件化记忆模型。"
+description: "了解 ReMe 如何将对话和资料转化为用户拥有的文件化 Agent 记忆。"
 ---
 
-ReMe 是面向 AI Agent 的 local-first 记忆层。它把对话和资料转化为可读、可编辑、可检索的文件，让记忆由用户拥有，并能在不同 Agent 和会话之间延续。
+ReMe 是面向 AI Agent 的 local-first 记忆层。它把对话和资料转化为文件化长期记忆，并持续完成索引、链接和整理，以便未来召回。用户可以直接检查和修正结果，也可以让同一份记忆在不同 Agent 与会话之间延续。
+
+下图概括了 ReMe 如何通过文件实现共享、可迁移的长期记忆：
 
 ![ReMe 设计理念](/images/reme/design-philosophy.svg)
 
@@ -26,18 +28,18 @@ ReMe 是面向 AI Agent 的 local-first 记忆层。它把对话和资料转化�
 - **Human-Agent Shared Memory**：人和 Agent 读写同一份 Markdown，知识始终可见、可控、可迁移。
 - **Connected and Traceable**：记忆通过链接形成关系，长期结论可以追溯到来源。
 
-完整的理念与取舍见 [Concepts](/reme/latest/zh/concepts)。
+完整的理念与取舍见[核心概念](/reme/latest/zh/concepts)。
 
 ## ReMe 解决什么问题
 
 Agent 的上下文通常随会话结束而消失。即使接入向量数据库，用户也很难知道系统记住了什么、依据是什么，以及如何修正或迁移这些记忆。
 
-ReMe 将长期状态放进本地 workspace，并使用普通的 Markdown、JSONL、YAML 和资源文件：
+ReMe 在本地 workspace 中形成完整的记忆闭环，同时保留可追溯的原始数据：
 
-- 原始对话和资料保留为可追溯的来源；
-- 有长期价值的信息被整理成 Markdown 记忆；
-- 文件被索引、链接，并在需要时召回；
-- 用户可以直接阅读、编辑、删除、备份或版本管理。
+- **捕获**：原始对话和资料保留为可追溯的来源。
+- **整理**：有价值的事实、偏好、流程和知识逐步演化为 Markdown 记忆。
+- **检索**：默认使用 BM25 和 wikilink，按需增加 embedding 语义召回。
+- **接入**：Python、AgentScope、MCP、CLI、HTTP、plugin 和 Skill 面向同一种文件化记忆模型；每个 workspace 只保留一个运行时所有者。
 
 ReMe 由此把记忆从 Agent 的内部状态，变成用户和 Agent 共同维护的知识资产。
 
@@ -48,14 +50,11 @@ ReMe 由此把记忆从 Agent 的内部状态，变成用户和 Agent 共同维�
 - **个人知识库**：将对话、笔记与资料整理成相互链接的 Markdown。
 - **经验驱动的 Agent**：把成功路径、失败教训和可复用流程沉淀下来。
 
-以下场景可能需要其他系统配合：
+如果需要严格事务、复杂权限或超大规模在线检索，ReMe 可能需要与其他系统配合。它是记忆层，而不是完整的 Agent 产品，也不会在用户不可见时进行无边界采集。
 
-- 只需要一次性的会话上下文，不需要长期维护；
-- 需要严格事务、复杂权限或超大规模在线检索；
-- 希望系统在用户不可见的情况下无边界收集信息；
-- 需要完整 Agent 产品，而不是可嵌入的记忆层。
+## 文件化记忆系统
 
-## 记忆如何流动
+ReMe 将原始证据、中间整理结果、长期记忆和派生系统状态分开保存。下面的流程展示了记忆如何在这些层次之间流动：
 
 ```text
 对话 / 资料 ──> 原始来源 ──> 当日记录 ──> 长期记忆
@@ -63,7 +62,16 @@ ReMe 由此把记忆从 Agent 的内部状态，变成用户和 Agent 共同维�
 Agent 当前任务 <──── 搜索、链接与来源展开 ─────┘
 ```
 
-ReMe 当前通过 Auto Memory、Auto Resource 和 Auto Dream 完成整理，通过关键词、向量与 wikilink 完成召回。这些名称属于实现；对用户更重要的承诺是：来源被保留，记忆可以修正，结果始终落在用户可访问的文件中。
+Workspace 中的顶层目录与流程一一对应：
+
+| 层次 | 目录 | 作用 |
+|---|---|---|
+| 原始来源 | `session/`、`resource/` | 保留原始对话和导入资料 |
+| 当日记忆 | `daily/` | 保存带来源链接的摘要和浅加工记忆 |
+| 长期记忆 | `digest/` | 保存可复用的个人事实、流程经验和知识 |
+| 派生状态 | `metadata/` | 保存可重建的索引、图谱和 catalog |
+
+ReMe 当前通过 Auto Memory、Auto Resource 和 Auto Dream 完成整理，通过 BM25、可选 embedding 和 wikilink 完成检索与关系扩展。这些机制可以继续演化；长期不变的承诺是：来源可追溯、记忆可修正、结果始终保存在用户可访问的文件中。
 
 ## 能否离线使用
 
@@ -73,15 +81,19 @@ ReMe 当前通过 Auto Memory、Auto Resource 和 Auto Dream 完成整理，通�
 
 <CardGroup cols={3}>
   <Card title="Python" icon="python" href="/reme/latest/zh/integration/python">
-    当宿主应用需要管理完整生命周期时，在同一进程中运行 ReMe。
+    直接嵌入 ReMe，或使用 AgentScope 的第一方 `ReMeMiddleware`。
   </Card>
   <Card title="Agent 接入" icon="robot" href="/reme/latest/zh/integration/agents">
-    通过宿主专用流程接入 Claude Code 或 QwenPaw。
+    接入 Claude Code、QwenPaw 等使用共享服务的 Agent。
   </Card>
   <Card title="接入" icon="arrows-to-circle" href="/reme/latest/zh/integration/overview">
     通过 MCP、Skill、CLI 或 HTTP 连接 ReMe。
   </Card>
 </CardGroup>
+
+## 研究
+
+ReMe 的经验驱动记忆方向详见论文 [Remember Me, Refine Me: A Dynamic Procedural Memory Framework for Experience-Driven Agent Evolution](https://aclanthology.org/2026.findings-acl.829/)，该论文已被 Findings of ACL 2026 接收。
 
 ## 更多入口
 

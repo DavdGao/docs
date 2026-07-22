@@ -5,8 +5,7 @@ description: "Run ReMe in the host Python process and manage its lifecycle direc
 
 Use Python integration when the host application needs in-process access and should own ReMe's startup, jobs, and shutdown. For process isolation or a language-neutral boundary, use a shared [ReMe service](/reme/latest/en/integration/services) instead.
 
-
-## Install
+## Install ReMe
 
 ReMe requires Python 3.11 or newer:
 
@@ -50,7 +49,7 @@ asyncio.run(main())
 
 ## Call Jobs
 
-`run_job(name, **kwargs)` is asynchronous and returns a response with `success`, `answer`, and `metadata`. Job names and parameters come from the resolved configuration. For example, an application can record a conversation with:
+`run_job(name, **kwargs)` is asynchronous and returns a response with `success`, `answer`, and `metadata`. Job names and parameters come from the resolved configuration. Within the started application above, record a conversation with:
 
 ```python
 result = await app.run_job(
@@ -63,7 +62,7 @@ result = await app.run_job(
 )
 ```
 
-Model-backed jobs such as `auto_memory` require the LLM environment described in [Quick Start](/reme/latest/en/quickstart#5-enable-memory-refinement-when-needed).
+Model-backed jobs such as `auto_memory` require the LLM environment described in the [Quick Start model setup](/reme/latest/en/quickstart#5-enable-memory-refinement-when-needed).
 
 ## Lifecycle Rules
 
@@ -77,13 +76,6 @@ ReMe provides the memory result. The host application still decides when to reca
 
 ## AgentScope
 
-AgentScope provides a first-party `ReMeMiddleware` that embeds ReMe in the AgentScope
-process. Use this integration when AgentScope owns the agent lifecycle instead of
-constructing `ReMe` directly. The middleware can reuse AgentScope chat and embedding
-models, automatically writes conversations through `auto_memory`, and supports automatic
-retrieval and the `memory_search` tool.
+When you build an AgentScope agent, use its first-party `ReMeMiddleware` instead of constructing `ReMe` directly. The middleware embeds ReMe in the AgentScope process and can reuse AgentScope chat and embedding models. It writes conversations through `auto_memory` and supports automatic retrieval and the `memory_search` tool.
 
-Install the optional integration with `pip install "agentscope[reme]"`. AgentScope does
-not close middleware automatically, so call `await memory.close()` during application
-shutdown. See [AgentScope Long-Term Memory](/agentscope/2.0.5dev/en/building-blocks/long-term-memory#reme)
-for the complete example, control modes, and session behavior.
+Install the integration with `pip install "agentscope[reme]"`. AgentScope does not close middleware automatically, so call `await memory.close()` during application shutdown. Read the [AgentScope long-term memory guide](/agentscope/2.0.5dev/en/building-blocks/long-term-memory#reme) for the complete example, control modes, and session behavior.

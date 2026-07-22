@@ -43,6 +43,8 @@ reme start service.port=8181
 
 ## 3. Write a Memory
 
+Use `reme write` to create a Markdown memory in the durable `digest/` area:
+
 ```bash
 reme write \
   path=digest/wiki/quick-start-demo \
@@ -65,6 +67,8 @@ reme read path=digest/wiki/quick-start-demo.md
 ```
 
 Open the file in the workspace too. Matching CLI output and disk content confirm that the minimum loop works.
+
+After completing the loop, the workspace contains these top-level areas:
 
 ```text
 .reme/
@@ -91,6 +95,6 @@ Model names and embedding-store activation are configuration choices. The author
 
 ## Next
 
-- Compare the available paths in [Integration Overview](/reme/latest/en/integration/overview), then use [Python](/reme/latest/en/integration/python) or connect [Claude Code or QwenPaw](/reme/latest/en/integration/agents).
-- Find workspace, configuration, and interface details in [Reference](/reme/latest/en/reference).
-- Use [FAQ](/reme/latest/en/faq) for connection or indexing problems.
+- Compare the available [integration paths](/reme/latest/en/integration/overview), then use [Python integration](/reme/latest/en/integration/python) or connect a [service-based agent](/reme/latest/en/integration/agents).
+- Find workspace, configuration, and interface details in the [ReMe reference](/reme/latest/en/reference).
+- Review the [ReMe FAQ](/reme/latest/en/faq) for connection or indexing problems.

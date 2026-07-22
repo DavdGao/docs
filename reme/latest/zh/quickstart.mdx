@@ -43,6 +43,8 @@ reme start service.port=8181
 
 ## 3. 写入第一条记忆
 
+使用 `reme write` 在长期记忆目录 `digest/` 中创建一个 Markdown 文件：
+
 ```bash
 reme write \
   path=digest/wiki/quick-start-demo \
@@ -65,6 +67,8 @@ reme read path=digest/wiki/quick-start-demo.md
 ```
 
 同时直接打开 workspace 中的文件。命令结果和磁盘文件一致，说明最小闭环已经跑通。
+
+完成这个闭环后，workspace 包含以下顶层目录：
 
 ```text
 .reme/
@@ -91,6 +95,6 @@ EMBEDDING_BASE_URL=https://dashscope.aliyuncs.com/compatible-mode/v1
 
 ## 下一步
 
-- 先在[接入概览](/reme/latest/zh/integration/overview)中比较不同方式，再通过 [Python](/reme/latest/zh/integration/python) 嵌入 ReMe，或接入 [Claude Code 与 QwenPaw](/reme/latest/zh/integration/agents)。
-- 用 [Reference](/reme/latest/zh/reference) 查 workspace、配置和接口入口。
-- 遇到连接或索引问题时查看 [FAQ](/reme/latest/zh/faq)。
+- 先在[接入概览](/reme/latest/zh/integration/overview)中比较不同方式；宿主进程可以选择 [Python 接入](/reme/latest/zh/integration/python)，也可以接入[使用共享服务的 Agent](/reme/latest/zh/integration/agents)。
+- 在 [ReMe 参考](/reme/latest/zh/reference)中查找 workspace、配置和接口入口。
+- 遇到连接或索引问题时查看 [ReMe FAQ](/reme/latest/zh/faq)。

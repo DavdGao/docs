@@ -13,6 +13,8 @@ The default workspace is `.reme/` under the launch directory. Override it at sta
 reme start workspace_dir=/path/to/workspace
 ```
 
+The workspace uses the following top-level directories:
+
 | Directory | Meaning | User editing |
 |---|---|---|
 | `session/` | Raw conversations and agent sessions | Usually read-only |
@@ -21,7 +23,9 @@ reme start workspace_dir=/path/to/workspace
 | `digest/` | Durable personal facts, procedures, and knowledge | Primary manual editing surface |
 | `metadata/` | Derived indexes, graph, and catalogs | Do not edit manually |
 
+<Note>
 `metadata/` can be rebuilt and must not be the only copy of memory. Backups should retain at least `session/`, `resource/`, `daily/`, and `digest/`.
+</Note>
 
 ## Markdown Memory
 

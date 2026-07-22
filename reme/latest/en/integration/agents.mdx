@@ -1,11 +1,13 @@
 ---
 title: "Agents"
-description: "Connect Agents to a deployed ReMe service with tools, Skills, plugins, and maintained integrations."
+description: "Connect agents to a deployed ReMe service with tools, Skills, plugins, and maintained integrations."
 ---
 
-Agent integrations sit above a running ReMe service. First [deploy a service](/reme/latest/en/integration/services), then choose how the Agent will connect to it and when it should recall or record memory.
+This page covers service-based agent integrations. First [deploy a ReMe service](/reme/latest/en/integration/services), then choose how the agent will connect and when it should recall or record memory. For AgentScope's in-process `ReMeMiddleware`, use the [Python integration](/reme/latest/en/integration/python#agentscope) instead.
 
 ## Choose an Integration Pattern
+
+The following patterns differ in how they package service access and memory behavior:
 
 | Pattern | What it provides | Best for |
 |---|---|---|
@@ -56,7 +58,7 @@ The Claude Code plugin combines MCP recall, a recall skill, and asynchronous ses
 
 ### 1. Start ReMe
 
-Install ReMe through [Quick Start](/reme/latest/en/quickstart), then keep the MCP service running:
+Install ReMe through the [ReMe Quick Start](/reme/latest/en/quickstart), then keep the MCP service running:
 
 ```bash
 reme start service.backend=mcp service.transport=streamable-http
@@ -111,7 +113,7 @@ Keep the default HTTP service running:
 reme start
 ```
 
-Conversation refinement and consolidation require the LLM environment described in [Quick Start](/reme/latest/en/quickstart#5-enable-memory-refinement-when-needed).
+Conversation refinement and consolidation require the LLM environment described in the [Quick Start model setup](/reme/latest/en/quickstart#5-enable-memory-refinement-when-needed).
 
 ### 2. Install the ReMe Skill
 

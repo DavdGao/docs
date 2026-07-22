@@ -1,15 +1,45 @@
 # AgentScope Documentation
 
-This repository contains the unified documentation site for [AgentScope](https://github.com/agentscope-ai/agentscope) and [ReMe](https://github.com/agentscope-ai/ReMe). The site is built with [Mintlify](https://mintlify.com) and deployed at [docs.agentscope.io](https://docs.agentscope.io).
+This repository is the source for the unified
+[AgentScope documentation site](https://docs.agentscope.io). It publishes English and
+Chinese documentation for [AgentScope](https://github.com/agentscope-ai/agentscope) and
+[ReMe](https://github.com/agentscope-ai/ReMe) with
+[Mintlify](https://mintlify.com).
 
 ## Documentation Sets
 
-- **AgentScope**: a framework for building agent applications.
-- **ReMe**: a local-first, file-native memory layer for AI agents.
+The two projects share one site but keep separate content and release models:
 
-AgentScope maintains a bilingual version history. ReMe is updated in place under
-`reme/latest/`, with a single bilingual navigation entry named `latest` in
-`docs.json`.
+| Project | Documentation scope | Live documentation | Update model |
+|---|---|---|---|
+| AgentScope | Building, operating, and deploying agent applications | [AgentScope docs](https://docs.agentscope.io/latest/en/index) | Immutable version directories |
+| ReMe | File-native agent memory, workflows, integrations, and stable contracts | [ReMe docs](https://docs.agentscope.io/reme/latest/en/overview) | One continuously updated `latest` version |
+
+## ReMe Documentation
+
+The ReMe repository [README](https://github.com/agentscope-ai/ReMe#readme) is the concise
+project entry point. This repository owns the complete public documentation: concepts,
+verified workflows, integrations, reference material, troubleshooting, and contribution
+guidance.
+
+ReMe documentation should preserve the product principles expressed by its README:
+
+- memory files are user-owned source data;
+- indexes, graphs, and caches are rebuildable derived state;
+- conversations and resources become correctable, traceable Markdown memory;
+- Python, AgentScope, MCP, CLI, HTTP, plugins, and Skills are integration boundaries over
+  the same file-native memory model.
+
+The current ReMe content is organized by user goal:
+
+| Area | Pages | Purpose |
+|---|---|---|
+| Get Started | [Overview](reme/latest/en/overview.mdx), [Quick Start](reme/latest/en/quickstart.mdx), [Concepts](reme/latest/en/concepts.mdx) | Explain the product, complete the first memory loop, and establish its principles |
+| Usage | [Integration overview](reme/latest/en/integration/overview.mdx), [Services](reme/latest/en/integration/services.mdx), [Python](reme/latest/en/integration/python.mdx), [Agents](reme/latest/en/integration/agents.mdx) | Choose and implement the correct runtime boundary |
+| Resources | [Reference](reme/latest/en/reference.mdx), [FAQ](reme/latest/en/faq.mdx), [Contribution](reme/latest/en/contribution.mdx) | Find stable contracts, solve common problems, and contribute changes |
+
+Chinese pages mirror the same structure under `reme/latest/zh/`. Update both languages
+together and keep their intent, headings, examples, and links aligned.
 
 ## Local Development
 
@@ -44,6 +74,22 @@ The preview is available at `http://localhost:3000` by default.
 └── CLAUDE.md                # Writing and review guidelines
 ```
 
+## Content Boundaries
+
+Keep public documentation focused on user goals and stable behavior:
+
+- Verify ReMe behavior against current code, public schemas, tests, CLI help, and
+  `reme/config/default.yaml`.
+- Explain the stable contract and link to authoritative source instead of duplicating
+  implementation details.
+- Keep concepts focused on product intent; place detailed development mechanics in source
+  code, tests, and repository-local guidance.
+- Lead with the outcome, use direct language, and introduce every table, image, diagram,
+  and code block.
+- Start each MDX page with `title` and `description` frontmatter.
+
+See [CLAUDE.md](CLAUDE.md) for the complete writing and component guidelines.
+
 ## Version Management
 
 AgentScope documentation is immutable within each published version directory. For a new
@@ -62,18 +108,27 @@ directly, keep canonical internal links under `/reme/latest/...`, and leave its
 `docs.json` version label as `latest`. The `/reme/stable/...` alias and obsolete
 numeric-version URLs redirect to the current pages for compatibility.
 
-## Contributing
+## Contribution Workflow
 
 When adding or updating documentation:
 
-1. Place `.mdx` files in the correct project and language directory.
-2. Update `docs.json` when pages or versions change.
-3. Start every page with YAML frontmatter containing `title` and `description`.
-4. Follow [CLAUDE.md](CLAUDE.md) for writing and review conventions.
-5. Run `mint validate` before submitting a pull request.
+1. Verify the behavior in the corresponding project source.
+2. Update the correct project, version, and language pages.
+3. For ReMe, make the equivalent English and Chinese changes in `reme/latest/`.
+4. Update `docs.json` when navigation, versions, or compatibility redirects change.
+5. Check page links and run `mint validate` before submitting a pull request.
+
+Run these checks from the repository root before submitting:
+
+```bash
+git diff --check
+mint validate
+```
 
 ## Resources
 
 - [AgentScope GitHub](https://github.com/agentscope-ai/agentscope)
 - [ReMe GitHub](https://github.com/agentscope-ai/ReMe)
+- [ReMe English documentation](https://docs.agentscope.io/reme/latest/en/overview)
+- [ReMe 中文文档](https://docs.agentscope.io/reme/latest/zh/overview)
 - [Mintlify Documentation](https://mintlify.com/docs)

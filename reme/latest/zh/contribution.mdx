@@ -14,11 +14,13 @@ git clone https://github.com/agentscope-ai/ReMe.git
 cd ReMe
 python -m venv .venv
 source .venv/bin/activate
-pip install -e ".[full]"
+pip install -e ".[dev,core]"
 pre-commit install
 ```
 
 ## 代码地图
+
+通过下面的目录找到实现及与其最接近的测试：
 
 ```text
 reme/
@@ -39,21 +41,22 @@ tests/
 
 ## 本地检查
 
-提交前至少运行：
+提交前运行仓库检查和主要单元测试：
 
 ```bash
 pre-commit run --all-files
-pytest
+pytest tests/unit -v --tb=long -s --log-cli-level=WARNING
 ```
 
 开发时可以先运行相关用例：
 
 ```bash
-pytest tests/unit/test_reme_cli.py
-pytest tests/unit -q
+pytest tests/unit/test_reme_cli.py -v
 ```
 
+<Note>
 依赖 LLM、embedding 或外部服务的测试可能需要额外环境变量。无法运行时，在 PR 中明确说明原因和替代验证。
+</Note>
 
 ## 变更要求
 

@@ -14,11 +14,13 @@ git clone https://github.com/agentscope-ai/ReMe.git
 cd ReMe
 python -m venv .venv
 source .venv/bin/activate
-pip install -e ".[full]"
+pip install -e ".[dev,core]"
 pre-commit install
 ```
 
 ## Code Map
+
+Use this map to find the implementation and its closest tests:
 
 ```text
 reme/
@@ -39,21 +41,22 @@ Source and tests are the authoritative architecture and extension guide. Before 
 
 ## Local Checks
 
-Before submitting, run at least:
+Before submitting, run the repository checks and main unit suite:
 
 ```bash
 pre-commit run --all-files
-pytest
+pytest tests/unit -v --tb=long -s --log-cli-level=WARNING
 ```
 
 During development, run focused tests first:
 
 ```bash
-pytest tests/unit/test_reme_cli.py
-pytest tests/unit -q
+pytest tests/unit/test_reme_cli.py -v
 ```
 
+<Note>
 Tests using an LLM, embeddings, or an external service may need extra environment variables. If they cannot run locally, state why and describe substitute validation in the PR.
+</Note>
 
 ## Change Requirements
 

@@ -5,8 +5,7 @@ description: "在宿主 Python 进程中运行 ReMe，并直接管理其生命�
 
 当宿主应用需要进程内调用，并希望管理 ReMe 的启动、任务和关闭时，使用 Python 接入。如果更看重进程隔离或跨语言边界，请改用共享的 [ReMe 服务](/reme/latest/zh/integration/services)。
 
-
-## 安装
+## 安装 ReMe
 
 ReMe 需要 Python 3.11 或更高版本：
 
@@ -50,7 +49,7 @@ asyncio.run(main())
 
 ## 调用 Job
 
-`run_job(name, **kwargs)` 是异步方法，返回包含 `success`、`answer` 和 `metadata` 的 response。Job 名称和参数来自解析后的配置。例如，应用可以这样记录一段对话：
+`run_job(name, **kwargs)` 是异步方法，返回包含 `success`、`answer` 和 `metadata` 的 response。Job 名称和参数来自解析后的配置。在上面已经启动的应用中，可以这样记录一段对话：
 
 ```python
 result = await app.run_job(
@@ -63,7 +62,7 @@ result = await app.run_job(
 )
 ```
 
-`auto_memory` 等模型任务需要先配置 [快速开始](/reme/latest/zh/quickstart#5-按需启用记忆演化) 中的 LLM 环境。
+`auto_memory` 等模型任务需要先完成[快速开始中的模型配置](/reme/latest/zh/quickstart#5-按需启用记忆演化)。
 
 ## 生命周期规则
 
@@ -77,11 +76,6 @@ ReMe 负责返回记忆，宿主应用仍需决定何时召回、什么内容值
 
 ## AgentScope
 
-AgentScope 提供了第一方 `ReMeMiddleware`，可以在 AgentScope 进程内嵌入 ReMe。
-当 AgentScope 管理 Agent 生命周期时，应优先使用这一接入方式，而不是直接构造
-`ReMe`。该中间件可以复用 AgentScope 的 chat 与 embedding model，通过
-`auto_memory` 自动写回对话，并支持自动检索和 `memory_search` 工具。
+使用 AgentScope 构建 Agent 时，应使用第一方 `ReMeMiddleware`，而不是直接构造 `ReMe`。该中间件在 AgentScope 进程内嵌入 ReMe，并可以复用 AgentScope 的 chat 与 embedding model。它通过 `auto_memory` 自动写回对话，同时支持自动检索和 `memory_search` 工具。
 
-使用 `pip install "agentscope[reme]"` 安装可选依赖。AgentScope 不会自动关闭
-middleware，因此应用退出时仍需调用 `await memory.close()`。完整示例、控制模式和
-会话行为见 [AgentScope 长期记忆](/agentscope/2.0.5dev/zh/building-blocks/long-term-memory#reme)。
+使用 `pip install "agentscope[reme]"` 安装可选依赖。AgentScope 不会自动关闭 middleware，因此应用退出时仍需调用 `await memory.close()`。完整示例、控制模式和会话行为见 [AgentScope 长期记忆指南](/agentscope/2.0.5dev/zh/building-blocks/long-term-memory#reme)。

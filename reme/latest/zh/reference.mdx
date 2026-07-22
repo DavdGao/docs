@@ -13,6 +13,8 @@ description: "ReMe 稳定的 workspace、配置、CLI、HTTP 和 MCP 契约。"
 reme start workspace_dir=/path/to/workspace
 ```
 
+Workspace 使用以下顶层目录：
+
 | 目录 | 语义 | 用户是否应编辑 |
 |---|---|---|
 | `session/` | 原始对话和 Agent session | 通常只读 |
@@ -21,7 +23,9 @@ reme start workspace_dir=/path/to/workspace
 | `digest/` | 可长期复用的个人事实、流程与知识 | 主要人工编辑入口 |
 | `metadata/` | 索引、图谱、catalog 等派生状态 | 不应手工编辑 |
 
+<Note>
 `metadata/` 可以从用户文件重建，不应被当作唯一记忆来源。备份时至少保留 `session/`、`resource/`、`daily/` 和 `digest/`。
+</Note>
 
 ## Markdown 记忆
 
