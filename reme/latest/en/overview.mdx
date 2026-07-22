@@ -1,0 +1,87 @@
+---
+title: "Overview"
+description: "Understand ReMe's philosophy, use cases, and file-native memory model."
+---
+
+ReMe is a local-first memory layer for AI agents. It turns conversations and resources into readable, editable, and searchable files, so users own their memory and can carry it across agents and sessions.
+
+![ReMe design philosophy](/images/reme/design-philosophy.svg)
+
+<CardGroup cols={3}>
+  <Card title="Start in 5 Minutes" icon="rocket" href="/reme/latest/en/quickstart">
+    Install ReMe and complete a verifiable write, search, and read loop.
+  </Card>
+  <Card title="Explore the Concepts" icon="compass" href="/reme/latest/en/concepts">
+    Understand the principles and trade-offs behind file-native memory.
+  </Card>
+  <Card title="Choose an Integration" icon="plug" href="#choose-an-integration">
+    Embed ReMe in Python, connect a supported agent, or choose a service interface.
+  </Card>
+</CardGroup>
+
+## Core Ideas
+
+- **Memory as File**: memory is a user-owned file, not hidden database state.
+- **Memory from Experience**: long-term memory is refined and corrected, not an endless context dump.
+- **Human-Agent Shared Memory**: people and agents work on the same visible, portable Markdown.
+- **Connected and Traceable**: links provide context and trace durable conclusions back to sources.
+
+Read [Concepts](/reme/latest/en/concepts) for the full philosophy and trade-offs.
+
+## What ReMe Solves
+
+Agent context usually disappears when a session ends. Even with a vector database, users may not know what was remembered, where a conclusion came from, or how to correct and move that memory.
+
+ReMe places durable state in a local workspace using ordinary Markdown, JSONL, YAML, and resource files:
+
+- raw conversations and resources remain available as sources;
+- durable information is refined into Markdown memories;
+- files are indexed, linked, and recalled when needed;
+- users can read, edit, delete, back up, or version the result directly.
+
+Memory becomes shared knowledge owned by the user instead of opaque agent state.
+
+## Where It Fits
+
+- **Personal assistants** that retain preferences, background, plans, and important events.
+- **Coding agents** that carry project decisions, conventions, and debugging experience across sessions.
+- **Personal knowledge bases** built from conversations, notes, and linked resources.
+- **Experience-driven agents** that preserve reusable procedures and lessons learned.
+
+ReMe may need another system alongside it when you need strict transactions, complex authorization, or very large-scale online retrieval. It is a memory layer—not a complete agent product—and deliberately avoids invisible, unbounded collection.
+
+## How Memory Flows
+
+```text
+conversations / resources -> sources -> daily notes -> durable memory
+                                                  |
+current agent task <-------- search and links -----+
+```
+
+The current implementation uses Auto Memory, Auto Resource, and Auto Dream for refinement, plus keyword, embedding, and wikilink retrieval. Those names can change. The durable promise is that sources remain traceable, memories remain correctable, and results remain in user-accessible files.
+
+## Offline Use
+
+File operations, keyword search, and wikilink traversal do not require an LLM. Conversation refinement, resource interpretation, and long-term consolidation need a compatible LLM. Semantic search additionally needs an embedding service.
+
+## Choose an Integration
+
+<CardGroup cols={3}>
+  <Card title="Python" icon="python" href="/reme/latest/en/integration/python">
+    Run ReMe in process when the host application owns its lifecycle.
+  </Card>
+  <Card title="Agents" icon="robot" href="/reme/latest/en/integration/agents">
+    Connect Claude Code or QwenPaw with a host-specific workflow.
+  </Card>
+  <Card title="Integration" icon="arrows-to-circle" href="/reme/latest/en/integration/overview">
+    Connect through MCP, a Skill, the CLI, or HTTP.
+  </Card>
+</CardGroup>
+
+## More
+
+<CardGroup cols={3}>
+  <Card title="Reference" icon="book" href="/reme/latest/en/reference">Workspace, configuration, and self-describing interfaces.</Card>
+  <Card title="FAQ" icon="life-ring" href="/reme/latest/en/faq">Common questions and troubleshooting.</Card>
+  <Card title="Contribution" icon="code-pull-request" href="/reme/latest/en/contribution">Development setup, tests, and contribution flow.</Card>
+</CardGroup>

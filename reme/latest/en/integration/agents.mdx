@@ -1,0 +1,145 @@
+---
+title: "Agents"
+description: "Connect Agents to a deployed ReMe service with tools, Skills, plugins, and maintained integrations."
+---
+
+Agent integrations sit above a running ReMe service. First [deploy a service](/reme/latest/en/integration/services), then choose how the Agent will connect to it and when it should recall or record memory.
+
+## Choose an Integration Pattern
+
+| Pattern | What it provides | Best for |
+|---|---|---|
+| Direct tools | Calls to the service through MCP, CLI, or HTTP | Custom Agents that already manage tool use and session lifecycle |
+| Skill | Rules for when to search, read, and record through a service client | Hosts that support portable Agent Skills |
+| Plugin | Connection configuration, tools or Skills, and lifecycle hooks in one host-specific package | Hosts with a maintained ReMe plugin |
+
+All three patterns connect to the same service boundary:
+
+```text
+Agent ── tools / Skill / plugin ──> MCP / CLI / HTTP ──> ReMe service ──> workspace
+```
+
+The Agent-side integration does not own the ReMe process. It selects the service interface, supplies session context, and decides when returned memory should affect an answer.
+
+### Skill
+
+A Skill is the behavior layer above the service interface, not a service or transport. The bundled [`skills/reme_memory/`](https://github.com/agentscope-ai/ReMe/tree/main/skills/reme_memory) uses the ReMe CLI; another host can apply the same behavior through MCP tools or HTTP.
+
+To use the Skill, install the complete `skills/reme_memory/` directory in the host's skill location. Keep `SKILL.md` and its supporting rules together. The host should then:
+
+1. Search, then read relevant files before answering about earlier conversations, preferences, decisions, or project history.
+2. Record only durable facts, preferences, decisions, and lessons; do not store secrets or sensitive information by default.
+3. Call `auto_memory` after a useful session or when stable information appears, using a stable `session_id` from the host lifecycle.
+4. Let ReMe's cron run `auto_dream`, or trigger it from the host lifecycle.
+5. Treat ReMe as memory input; the Agent still decides whether and how to use the result.
+
+The Skill does not start ReMe or invent missing conversation history.
+
+### Plugin
+
+A plugin packages the pieces needed by a specific host, such as service connection settings, tools, Skills, and session hooks. It should point to an already deployed ReMe service and use the host lifecycle for automatic recall or recording. Installing a plugin does not imply that it starts or owns ReMe.
+
+## Maintained Integrations
+
+ReMe currently includes maintained integration packages for these hosts:
+
+| Host | Integration | Recall | Recording |
+|---|---|---|---|
+| Claude Code | ReMe plugin | MCP tools and `reme-memory` Skill | Automatic Stop hook |
+| QwenPaw | `reme_memory` Skill | ReMe CLI | QwenPaw session lifecycle |
+
+The following sections cover their host-specific setup and verification.
+
+## Claude Code
+
+The Claude Code plugin combines MCP recall, a recall skill, and asynchronous session recording. It connects to a shared ReMe MCP server and does not start ReMe itself.
+
+### 1. Start ReMe
+
+Install ReMe through [Quick Start](/reme/latest/en/quickstart), then keep the MCP service running:
+
+```bash
+reme start service.backend=mcp service.transport=streamable-http
+```
+
+The default endpoint is `http://127.0.0.1:2333/mcp`. Automatic recording also requires the configured LLM environment.
+
+### 2. Install the Plugin
+
+Clone the ReMe repository. From its root, add the bundled marketplace and install the plugin in Claude Code:
+
+```text
+/plugin marketplace add ./plugins/claude_code
+/plugin install reme@reme-marketplace
+```
+
+Restart Claude Code, run `/mcp`, and confirm that the `reme` server and tools are connected.
+
+The package is located under `plugins/claude_code/`. Its `.mcp.json` defines the server URL, the `reme-memory` skill controls recall, and `hooks/auto_memory.py` calls `auto_memory_cc` after a session ends.
+
+### 3. Verify Recall and Recording
+
+Write a distinctive memory from a terminal:
+
+```bash
+reme write \
+  path=digest/wiki/claude-code-check \
+  name="Claude Code Check" \
+  description="Claude Code integration check" \
+  content="Project rule: run pytest before submitting changes."
+```
+
+Ask Claude Code what to run before submitting changes. It should search and read ReMe before answering.
+
+Next, end a conversation containing durable information and search for a distinctive phrase after a short delay:
+
+```bash
+reme search query="<phrase from the conversation>" limit=5
+```
+
+The Stop hook runs asynchronously and is best-effort: an unavailable ReMe service does not block Claude Code. If you change the server port, update `plugins/claude_code/reme/.mcp.json` too. See the [plugin README](https://github.com/agentscope-ai/ReMe/blob/main/plugins/claude_code/README.md) for hook overrides and log locations.
+
+## QwenPaw
+
+QwenPaw integrates through the bundled ReMe Skill described above. The Skill defines when the Agent should recall or record; the ReMe service handles persistence, indexing, and refinement.
+
+### 1. Start ReMe
+
+Keep the default HTTP service running:
+
+```bash
+reme start
+```
+
+Conversation refinement and consolidation require the LLM environment described in [Quick Start](/reme/latest/en/quickstart#5-enable-memory-refinement-when-needed).
+
+### 2. Install the ReMe Skill
+
+Install the repository's complete [`skills/reme_memory/`](https://github.com/agentscope-ai/ReMe/tree/main/skills/reme_memory) directory in QwenPaw's skill location. Keep `SKILL.md` and its behavior rules together.
+
+Once loaded, QwenPaw should:
+
+- search and read before answering about past conversations, preferences, decisions, or project history;
+- record durable information with `auto_memory` rather than saving every turn;
+- obtain explicit consent before storing sensitive information;
+- provide a stable `session_id` from its session lifecycle.
+
+<Note>
+`skills/qwenpaw_memory` directly maintains `MEMORY.md` and `memory/*.md`; it does not call ReMe. Use `skills/reme_memory` for ReMe integration.
+</Note>
+
+### 3. Verify Recall and Recording
+
+Write a test memory from a terminal:
+
+```bash
+reme write \
+  path=digest/personal/qwenpaw-check \
+  name="QwenPaw Check" \
+  description="QwenPaw integration check" \
+  content="User preference: lead with the conclusion in technical explanations."
+```
+
+Ask QwenPaw how you prefer technical explanations. Confirm that it searches ReMe and reads the file before answering.
+
+After providing another durable fact, end the session and search for its keywords. If the installed QwenPaw version has no session-end hook, let the application call `auto_memory` explicitly or enable recall only; do not invent a missing message history.

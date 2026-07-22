@@ -12,6 +12,7 @@ AgentScope currently supports the following long-term memory implementations, wi
 | Name | Code API | Description |
 |------|----------|-------------|
 | Agentic Memory | `AgenticMemoryMiddleware` | Markdown-file-based long-term memory that agents create, maintain, and use autonomously. |
+| ReMe | `ReMeMiddleware` | An in-process, file-based long-term memory powered by [ReMe](https://github.com/agentscope-ai/ReMe), which automatically extracts and writes back memories from conversations. |
 | Mem0 | `Mem0Middleware` | A drop-in long-term memory backend powered by [mem0](https://github.com/mem0ai/mem0). |
 | More coming ... | | |
 
@@ -205,6 +206,102 @@ finally:
 ```
 
 </CodeGroup>
+
+## ReMe
+
+[ReMe](https://github.com/agentscope-ai/ReMe) is a file-based memory toolkit maintained by the AgentScope team. `ReMeMiddleware` embeds ReMe in the current process, so no separate service is required. It listens to the agent's conversations and automatically extracts and writes back memories through ReMe's `auto_memory` job after each reply. The agent does not save memories itself, and ReMe does not provide a manual memory-add tool.
+
+<Tip>
+The ReMe workspace is specified by `workspace_dir` and stores memory cards and search indexes. Reusing the same workspace across sessions enables cross-session recall.
+</Tip>
+
+### Installation
+
+`ReMeMiddleware`'s dependencies are available as an optional AgentScope extra:
+
+```bash
+pip install "agentscope[reme]"
+```
+
+### Quick start
+
+You can inject AgentScope chat and embedding models into ReMe. The chat model drives `auto_memory` extraction; providing an embedding model automatically enables vector search with the default configuration. Replace `my_chat_model` and `my_embedding_model` below with your model instances:
+
+```python
+import asyncio
+
+from agentscope.agent import Agent
+from agentscope.middleware import ReMeMiddleware
+from agentscope.state import AgentState
+from agentscope.tool import Toolkit
+
+
+async def main():
+    memory = ReMeMiddleware(
+        workspace_dir=".reme",
+        parameters=ReMeMiddleware.Parameters(
+            chat_model=my_chat_model,
+            embedding_model=my_embedding_model,
+            mode="both",
+            top_k=5,
+        ),
+    )
+
+    agent = Agent(
+        name="assistant",
+        system_prompt="You are a helpful assistant.",
+        model=my_chat_model,
+        # In both / agent_control modes, add memory_search to the toolkit.
+        toolkit=Toolkit(tools=await memory.list_tools()),
+        middlewares=[memory],
+        # Set a stable ID for a resumable session; AgentState generates one
+        # automatically when no ID is provided.
+        state=AgentState(session_id="alice-main"),
+    )
+
+    try:
+        await agent.reply("Remember that I live in Hangzhou and prefer concise Chinese answers.")
+    finally:
+        # AgentScope does not manage middleware lifecycles automatically.
+        await memory.close()
+
+
+asyncio.run(main())
+```
+
+Without injected models, ReMe creates its LLM and embedding backends from its own configuration and credentials. The default `default` configuration uses BM25 keyword search for its file store. For semantic search, pass an `embedding_model`. Its vector dimensions must match the vector store configured for ReMe; the example uses a 1024-dimensional DashScope embedding model.
+
+### Control modes
+
+`ReMeMiddleware.Parameters.mode` defaults to `"both"` and controls retrieval only; conversation write-back runs automatically in all three modes.
+
+| Mode | Behavior |
+|------|----------|
+| `static_control` | The middleware starts a background search when `reply` begins and injects the results as an `AssistantMsg(name="memory")` hint before a later reasoning step; the agent is unaware of the retrieval. Because search runs concurrently with the reply, a single-model-call reply may finish before the hint can be injected. |
+| `agent_control` | No automatic retrieval. The middleware exposes a `memory_search(query, limit)` tool through `list_tools()` and appends a short usage nudge to the system prompt; the agent decides when to search. The conversation is still written back automatically after the reply. |
+| `both` | Enables both automatic retrieval and the `memory_search` tool. |
+
+In `static_control` mode, `await memory.list_tools()` returns an empty list. In `agent_control` and `both` modes, pass the returned tools into `Toolkit` as shown above. `memory_search` is query-only; there is no `add_memory` tool because writes are always handled automatically by the middleware.
+
+### Session scope and lifecycle
+
+- Write-back is scoped by `agent.state.session_id`. Set a stable ID with `AgentState(session_id="...")` for a resumable session; the ID does not belong on the middleware configuration.
+- Search spans the entire `workspace_dir`, rather than only the current `session_id`. A new agent using the same workspace can therefore recall memories written by an earlier session.
+- One `ReMeMiddleware` can safely be shared across multiple agents and sessions. The middleware reads each agent's `session_id` at hook time. Call `await memory.close()` explicitly when the application shuts down.
+
+After `auto_memory` writes a card, ReMe still needs to index it before it becomes searchable. A search issued immediately after write-back may temporarily miss the new card. The [`examples/long_term_memory/reme`](https://github.com/agentscope-ai/agentscope/tree/main/examples/long_term_memory/reme) example explicitly triggers indexing after write-back so its demonstration is deterministic.
+
+### Key parameters
+
+| Location | Parameter | Default | Description |
+|----------|-----------|---------|-------------|
+| `ReMeMiddleware(...)` | `workspace_dir` | `".reme"` | Directory for ReMe memory cards and indexes. |
+| `ReMeMiddleware(...)` | `config` | `"default"` | ReMe configuration name or configuration file path. |
+| `Parameters` | `chat_model` | `None` | LLM injected into ReMe for `auto_memory`; when omitted, ReMe uses its own configured credentials. |
+| `Parameters` | `embedding_model` | `None` | Embedding model injected into ReMe and enables the vector store; when omitted, ReMe uses its own embedding backend and the default configuration remains BM25-based. |
+| `Parameters` | `mode` | `"both"` | `static_control`, `agent_control`, or `both`. |
+| `Parameters` | `top_k` | `5` | Maximum memories returned by each automatic search and the default `limit` for `memory_search`. |
+
 
 ## Mem0
 

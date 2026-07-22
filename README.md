@@ -7,7 +7,9 @@ This repository contains the unified documentation site for [AgentScope](https:/
 - **AgentScope**: a framework for building agent applications.
 - **ReMe**: a local-first, file-native memory layer for AI agents.
 
-Each project owns its version history and bilingual navigation. Version selectors are defined independently for the `AgentScope` and `ReMe` tabs in `docs.json`.
+AgentScope maintains a bilingual version history. ReMe is updated in place under
+`reme/latest/`, with a single bilingual navigation entry named `latest` in
+`docs.json`.
 
 ## Local Development
 
@@ -35,7 +37,7 @@ The preview is available at `http://localhost:3000` by default.
 ├── agentscope/
 │   └── <version>/{en,zh}/   # Versioned AgentScope documentation
 ├── reme/
-│   └── <version>/{en,zh}/   # Versioned ReMe documentation
+│   └── latest/{en,zh}/      # Current ReMe documentation
 ├── images/                  # Shared static assets
 ├── scripts/                 # Documentation maintenance scripts
 ├── docs.json                # Mintlify navigation and redirects
@@ -44,21 +46,27 @@ The preview is available at `http://localhost:3000` by default.
 
 ## Version Management
 
-Published documentation is immutable within its version directory. For a new release:
+AgentScope documentation is immutable within each published version directory. For a new
+AgentScope release:
 
 1. Copy the latest relevant version into a new project version directory.
 2. Update every version-specific internal link in the copied pages.
 3. Add the version under the matching project tab for both languages in `docs.json`.
-4. Point that project's `latest` or `stable` redirect at the new version.
+4. Point the relevant `latest` or `stable` redirect at the new version.
 5. Run `mint validate` before submitting the change.
 
-AgentScope versions can be created with `scripts/create-version.sh`. ReMe follows the same directory and navigation model under `reme/` and uses project-scoped aliases such as `/reme/stable/...` so its releases do not affect AgentScope aliases.
+AgentScope versions can be created with `scripts/create-version.sh`.
+
+ReMe does not keep historical release directories. Update `reme/latest/{en,zh}/`
+directly, keep canonical internal links under `/reme/latest/...`, and leave its
+`docs.json` version label as `latest`. The `/reme/stable/...` alias and obsolete
+numeric-version URLs redirect to the current pages for compatibility.
 
 ## Contributing
 
 When adding or updating documentation:
 
-1. Place `.mdx` files in the correct project, version, and language directory.
+1. Place `.mdx` files in the correct project and language directory.
 2. Update `docs.json` when pages or versions change.
 3. Start every page with YAML frontmatter containing `title` and `description`.
 4. Follow [CLAUDE.md](CLAUDE.md) for writing and review conventions.

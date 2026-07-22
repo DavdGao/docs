@@ -298,31 +298,31 @@
             "tab": "ReMe",
             "versions": [
               {
-                "version": "0.4.0.6",
+                "version": "latest",
                 "groups": [
                   {
                     "group": "Get Started",
                     "pages": [
-                      "reme/0.4.0.6/en/index",
-                      "reme/0.4.0.6/en/overview",
-                      "reme/0.4.0.6/en/quickstart",
-                      "reme/0.4.0.6/en/concepts"
+                      "reme/latest/en/overview",
+                      "reme/latest/en/quickstart",
+                      "reme/latest/en/concepts"
                     ]
                   },
                   {
-                    "group": "Integrate",
+                    "group": "Usage",
                     "pages": [
-                      "reme/0.4.0.6/en/guides/index",
-                      "reme/0.4.0.6/en/guides/claude-code",
-                      "reme/0.4.0.6/en/guides/qwenpaw"
+                      "reme/latest/en/integration/overview",
+                      "reme/latest/en/integration/services",
+                      "reme/latest/en/integration/python",
+                      "reme/latest/en/integration/agents"
                     ]
                   },
                   {
-                    "group": "Reference & Contribute",
+                    "group": "Resources",
                     "pages": [
-                      "reme/0.4.0.6/en/reference",
-                      "reme/0.4.0.6/en/support",
-                      "reme/0.4.0.6/en/contributing"
+                      "reme/latest/en/reference",
+                      "reme/latest/en/faq",
+                      "reme/latest/en/contribution"
                     ]
                   }
                 ]
@@ -532,31 +532,31 @@
             "tab": "ReMe",
             "versions": [
               {
-                "version": "0.4.0.6",
+                "version": "latest",
                 "groups": [
                   {
                     "group": "快速开始",
                     "pages": [
-                      "reme/0.4.0.6/zh/index",
-                      "reme/0.4.0.6/zh/overview",
-                      "reme/0.4.0.6/zh/quickstart",
-                      "reme/0.4.0.6/zh/concepts"
+                      "reme/latest/zh/overview",
+                      "reme/latest/zh/quickstart",
+                      "reme/latest/zh/concepts"
                     ]
                   },
                   {
-                    "group": "接入",
+                    "group": "使用",
                     "pages": [
-                      "reme/0.4.0.6/zh/guides/index",
-                      "reme/0.4.0.6/zh/guides/claude-code",
-                      "reme/0.4.0.6/zh/guides/qwenpaw"
+                      "reme/latest/zh/integration/overview",
+                      "reme/latest/zh/integration/services",
+                      "reme/latest/zh/integration/python",
+                      "reme/latest/zh/integration/agents"
                     ]
                   },
                   {
-                    "group": "查阅与参与",
+                    "group": "资源",
                     "pages": [
-                      "reme/0.4.0.6/zh/reference",
-                      "reme/0.4.0.6/zh/support",
-                      "reme/0.4.0.6/zh/contributing"
+                      "reme/latest/zh/reference",
+                      "reme/latest/zh/faq",
+                      "reme/latest/zh/contribution"
                     ]
                   }
                 ]
@@ -612,12 +612,100 @@
       "destination": "/agentscope/2.0.4/:slug*"
     },
     {
-      "source": "/reme/latest/:slug*",
-      "destination": "/reme/0.4.0.6/:slug*"
+      "source": "/reme/:version/en/index",
+      "destination": "/reme/latest/en/overview"
+    },
+    {
+      "source": "/reme/:version/zh/index",
+      "destination": "/reme/latest/zh/overview"
+    },
+    {
+      "source": "/reme/:version/en/guides",
+      "destination": "/reme/latest/en/integration/overview"
+    },
+    {
+      "source": "/reme/:version/zh/guides",
+      "destination": "/reme/latest/zh/integration/overview"
+    },
+    {
+      "source": "/reme/:version/en/guides/index",
+      "destination": "/reme/latest/en/integration/overview"
+    },
+    {
+      "source": "/reme/:version/zh/guides/index",
+      "destination": "/reme/latest/zh/integration/overview"
+    },
+    {
+      "source": "/reme/:version/en/guides/claude-code",
+      "destination": "/reme/latest/en/integration/agents"
+    },
+    {
+      "source": "/reme/:version/zh/guides/claude-code",
+      "destination": "/reme/latest/zh/integration/agents"
+    },
+    {
+      "source": "/reme/:version/en/guides/qwenpaw",
+      "destination": "/reme/latest/en/integration/agents"
+    },
+    {
+      "source": "/reme/:version/zh/guides/qwenpaw",
+      "destination": "/reme/latest/zh/integration/agents"
+    },
+    {
+      "source": "/reme/:version/en/integration/plugin",
+      "destination": "/reme/latest/en/integration/agents"
+    },
+    {
+      "source": "/reme/:version/zh/integration/plugin",
+      "destination": "/reme/latest/zh/integration/agents"
+    },
+    {
+      "source": "/reme/:version/en/integration/others",
+      "destination": "/reme/latest/en/integration/overview"
+    },
+    {
+      "source": "/reme/:version/zh/integration/others",
+      "destination": "/reme/latest/zh/integration/overview"
+    },
+    {
+      "source": "/reme/:version/en/integration/interfaces",
+      "destination": "/reme/latest/en/integration/overview"
+    },
+    {
+      "source": "/reme/:version/zh/integration/interfaces",
+      "destination": "/reme/latest/zh/integration/overview"
+    },
+    {
+      "source": "/reme/:version/en/integration/skill",
+      "destination": "/reme/latest/en/integration/agents"
+    },
+    {
+      "source": "/reme/:version/zh/integration/skill",
+      "destination": "/reme/latest/zh/integration/agents"
+    },
+    {
+      "source": "/reme/:version/en/support",
+      "destination": "/reme/latest/en/faq"
+    },
+    {
+      "source": "/reme/:version/zh/support",
+      "destination": "/reme/latest/zh/faq"
+    },
+    {
+      "source": "/reme/:version/en/contributing",
+      "destination": "/reme/latest/en/contribution"
+    },
+    {
+      "source": "/reme/:version/zh/contributing",
+      "destination": "/reme/latest/zh/contribution"
     },
     {
       "source": "/reme/stable/:slug*",
-      "destination": "/reme/0.4.0.6/:slug*"
+      "destination": "/reme/latest/:slug*"
+    },
+    {
+      "source": "/reme/0.4.0.6/:slug*",
+      "destination": "/reme/latest/:slug*"
     }
   ],
   "footer": {
