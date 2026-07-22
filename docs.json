@@ -32,16 +32,66 @@
                     "group": "Building Blocks",
                     "pages": [
                       "versions/2.0.5dev/en/building-blocks/message-and-event",
-                      "versions/2.0.5dev/en/building-blocks/agent",
-                      "versions/2.0.5dev/en/building-blocks/model",
-                      "versions/2.0.5dev/en/building-blocks/context",
-                      "versions/2.0.5dev/en/building-blocks/tool",
+                      {
+                        "group": "Agent",
+                        "pages": [
+                          "versions/2.0.5dev/en/building-blocks/agent/overview",
+                          "versions/2.0.5dev/en/building-blocks/agent/configure-agent",
+                          "versions/2.0.5dev/en/building-blocks/agent/run-agent",
+                          "versions/2.0.5dev/en/building-blocks/agent/interrupt-agent",
+                          "versions/2.0.5dev/en/building-blocks/agent/human-in-the-loop"
+                        ]
+                      },
+                      {
+                        "group": "Model",
+                        "pages": [
+                          "versions/2.0.5dev/en/building-blocks/model/overview",
+                          "versions/2.0.5dev/en/building-blocks/model/llm",
+                          "versions/2.0.5dev/en/building-blocks/model/tts",
+                          "versions/2.0.5dev/en/building-blocks/model/embedding"
+                        ]
+                      },
+                      {
+                        "group": "Context",
+                        "pages": [
+                          "versions/2.0.5dev/en/building-blocks/context/overview",
+                          "versions/2.0.5dev/en/building-blocks/context/environment-awareness",
+                          "versions/2.0.5dev/en/building-blocks/context/compress-context",
+                          "versions/2.0.5dev/en/building-blocks/context/offload-context"
+                        ]
+                      },
+                      {
+                        "group": "Tool",
+                        "pages": [
+                          "versions/2.0.5dev/en/building-blocks/tool/overview",
+                          "versions/2.0.5dev/en/building-blocks/tool/python-tool",
+                          "versions/2.0.5dev/en/building-blocks/tool/mcp",
+                          "versions/2.0.5dev/en/building-blocks/tool/skill",
+                          "versions/2.0.5dev/en/building-blocks/tool/manage-tools"
+                        ]
+                      },
                       "versions/2.0.5dev/en/building-blocks/plan",
-                      "versions/2.0.5dev/en/building-blocks/permission-system",
+                      {
+                        "group": "Permission System",
+                        "pages": [
+                          "versions/2.0.5dev/en/building-blocks/permission-system/overview",
+                          "versions/2.0.5dev/en/building-blocks/permission-system/permission-mode",
+                          "versions/2.0.5dev/en/building-blocks/permission-system/permission-rule",
+                          "versions/2.0.5dev/en/building-blocks/permission-system/tool-check"
+                        ]
+                      },
                       "versions/2.0.5dev/en/building-blocks/middleware",
                       "versions/2.0.5dev/en/building-blocks/rag",
                       "versions/2.0.5dev/en/building-blocks/long-term-memory",
-                      "versions/2.0.5dev/en/building-blocks/workspace"
+                      {
+                        "group": "Workspace",
+                        "pages": [
+                          "versions/2.0.5dev/en/building-blocks/workspace/overview",
+                          "versions/2.0.5dev/en/building-blocks/workspace/run-workspace",
+                          "versions/2.0.5dev/en/building-blocks/workspace/manage-resources",
+                          "versions/2.0.5dev/en/building-blocks/workspace/mcp-gateway"
+                        ]
+                      }
                     ]
                   },
                   {
@@ -337,16 +387,66 @@
                     "group": "核心模块",
                     "pages": [
                       "versions/2.0.5dev/zh/building-blocks/message-and-event",
-                      "versions/2.0.5dev/zh/building-blocks/agent",
-                      "versions/2.0.5dev/zh/building-blocks/model",
-                      "versions/2.0.5dev/zh/building-blocks/context",
-                      "versions/2.0.5dev/zh/building-blocks/tool",
+                      {
+                        "group": "智能体",
+                        "pages": [
+                          "versions/2.0.5dev/zh/building-blocks/agent/overview",
+                          "versions/2.0.5dev/zh/building-blocks/agent/configure-agent",
+                          "versions/2.0.5dev/zh/building-blocks/agent/run-agent",
+                          "versions/2.0.5dev/zh/building-blocks/agent/interrupt-agent",
+                          "versions/2.0.5dev/zh/building-blocks/agent/human-in-the-loop"
+                        ]
+                      },
+                      {
+                        "group": "模型",
+                        "pages": [
+                          "versions/2.0.5dev/zh/building-blocks/model/overview",
+                          "versions/2.0.5dev/zh/building-blocks/model/llm",
+                          "versions/2.0.5dev/zh/building-blocks/model/tts",
+                          "versions/2.0.5dev/zh/building-blocks/model/embedding"
+                        ]
+                      },
+                      {
+                        "group": "上下文管理",
+                        "pages": [
+                          "versions/2.0.5dev/zh/building-blocks/context/overview",
+                          "versions/2.0.5dev/zh/building-blocks/context/environment-awareness",
+                          "versions/2.0.5dev/zh/building-blocks/context/compress-context",
+                          "versions/2.0.5dev/zh/building-blocks/context/offload-context"
+                        ]
+                      },
+                      {
+                        "group": "工具",
+                        "pages": [
+                          "versions/2.0.5dev/zh/building-blocks/tool/overview",
+                          "versions/2.0.5dev/zh/building-blocks/tool/python-tool",
+                          "versions/2.0.5dev/zh/building-blocks/tool/mcp",
+                          "versions/2.0.5dev/zh/building-blocks/tool/skill",
+                          "versions/2.0.5dev/zh/building-blocks/tool/manage-tools"
+                        ]
+                      },
                       "versions/2.0.5dev/zh/building-blocks/plan",
-                      "versions/2.0.5dev/zh/building-blocks/permission-system",
+                      {
+                        "group": "权限系统",
+                        "pages": [
+                          "versions/2.0.5dev/zh/building-blocks/permission-system/overview",
+                          "versions/2.0.5dev/zh/building-blocks/permission-system/permission-mode",
+                          "versions/2.0.5dev/zh/building-blocks/permission-system/permission-rule",
+                          "versions/2.0.5dev/zh/building-blocks/permission-system/tool-check"
+                        ]
+                      },
                       "versions/2.0.5dev/zh/building-blocks/middleware",
                       "versions/2.0.5dev/zh/building-blocks/rag",
                       "versions/2.0.5dev/zh/building-blocks/long-term-memory",
-                      "versions/2.0.5dev/zh/building-blocks/workspace"
+                      {
+                        "group": "工作区",
+                        "pages": [
+                          "versions/2.0.5dev/zh/building-blocks/workspace/overview",
+                          "versions/2.0.5dev/zh/building-blocks/workspace/run-workspace",
+                          "versions/2.0.5dev/zh/building-blocks/workspace/manage-resources",
+                          "versions/2.0.5dev/zh/building-blocks/workspace/mcp-gateway"
+                        ]
+                      }
                     ]
                   },
                   {

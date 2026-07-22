@@ -4,7 +4,7 @@ description: "Manage the lifecycle of agent harness workspace"
 tag: "NEW"
 ---
 
-The **workspace manager** owns the isolation policy and lifecycle of the [`Workspace`](/versions/2.0.5dev/en/building-blocks/workspace) instances the Agent Service hands to each agent. It is the service-side counterpart of the `agentscope.workspace` module: for every workspace subclass there is one matching manager class that provisions, caches, and evicts it.
+The **workspace manager** owns the isolation policy and lifecycle of the [`Workspace`](/versions/2.0.5dev/en/building-blocks/workspace/overview) instances the Agent Service hands to each agent. It is the service-side counterpart of the `agentscope.workspace` module: for every workspace subclass there is one matching manager class that provisions, caches, and evicts it.
 
 Highlights:
 
@@ -22,7 +22,7 @@ Highlights:
 | `K8sWorkspaceManager` | One Pod + PVC per workspace on a Kubernetes cluster. Fits production clusters where you already run other workloads. |
 
 <Tip>
-For an in-depth look at what a workspace *is* (filesystem layout, gateway, MCP wiring, builtin tools), see the [Workspace](/versions/2.0.5dev/en/building-blocks/workspace) building-block chapter.
+For an in-depth look at what a workspace *is* (filesystem layout, gateway, MCP wiring, builtin tools), see the [Workspace](/versions/2.0.5dev/en/building-blocks/workspace/overview) building-block chapter.
 </Tip>
 
 ## Integrate with Agent Service
@@ -262,7 +262,7 @@ Every manager implements the following contract from `WorkspaceManagerBase`. Cus
 
 ## Custom manager
 
-Any workspace class you build against [`WorkspaceBase`](/versions/2.0.5dev/en/building-blocks/workspace) can be surfaced to the Agent Service by pairing it with a `WorkspaceManagerBase` subclass. In most cases you only need to fill in a small provisioning + cache scaffold — the isolation policy is inherited.
+Any workspace class you build against [`WorkspaceBase`](/versions/2.0.5dev/en/building-blocks/workspace/overview) can be surfaced to the Agent Service by pairing it with a `WorkspaceManagerBase` subclass. In most cases you only need to fill in a small provisioning + cache scaffold — the isolation policy is inherited.
 
 ```python Custom manager
 import asyncio

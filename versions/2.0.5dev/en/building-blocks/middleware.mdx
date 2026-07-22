@@ -20,7 +20,7 @@ AgentScope exposes 6 hook positions plus a tool-provider hook, covering the full
 | `list_tools` | Tool source | Optional. Returns a `list[ToolBase]` that the middleware contributes. **Not invoked automatically** — the caller assembling the agent's toolkit decides whether to call it and how to merge the result. |
 
 <Note>
-These hooks operate at the **agent** level. For per-tool onion hooks that fire on every invocation of a specific tool — regardless of whether it's called inside or outside an agent — see [Tool Middleware](/versions/2.0.5dev/en/building-blocks/tool#tool-middleware).
+These hooks operate at the **agent** level. For per-tool onion hooks that fire on every invocation of a specific tool — regardless of whether it's called inside or outside an agent — see [Tool Middleware](/versions/2.0.5dev/en/building-blocks/tool/python-tool#tool-middleware).
 </Note>
 
 The three types differ as follows:

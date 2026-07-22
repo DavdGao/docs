@@ -4,7 +4,7 @@ description: "在服务中分配、管理智能体的运行环境（Workspace）
 tag: "NEW"
 ---
 
-**工作区管理器**（Workspace Manager）持有隔离策略，并管理智能体服务中每个智能体的 [`Workspace`](/versions/2.0.5dev/zh/building-blocks/workspace) 实例的生命周期。它是 `agentscope.workspace` 模块在服务侧的对应实现 —— 每一种 `WorkspaceBase` 子类都有一个配套的 `WorkspaceManagerBase` 的子类来负责创建、缓存与删除。
+**工作区管理器**（Workspace Manager）持有隔离策略，并管理智能体服务中每个智能体的 [`Workspace`](/versions/2.0.5dev/zh/building-blocks/workspace/overview) 实例的生命周期。它是 `agentscope.workspace` 模块在服务侧的对应实现 —— 每一种 `WorkspaceBase` 子类都有一个配套的 `WorkspaceManagerBase` 的子类来负责创建、缓存与删除。
 
 它的特点：
 
@@ -22,7 +22,7 @@ tag: "NEW"
 | `K8sWorkspaceManager` | 在 Kubernetes 集群上为每个 workspace 起一个 Pod + PVC。适合已经在跑其他负载的生产集群。 |
 
 <Tip>
-想深入了解 workspace *究竟是什么*（文件系统布局、gateway、MCP 接线、内置工具），请看 [Workspace](/versions/2.0.5dev/zh/building-blocks/workspace) 章节。
+想深入了解 workspace *究竟是什么*（文件系统布局、gateway、MCP 接线、内置工具），请看 [Workspace](/versions/2.0.5dev/zh/building-blocks/workspace/overview) 章节。
 </Tip>
 
 ## 接入智能体服务
@@ -261,7 +261,7 @@ async with AsyncExitStack() as stack:
 
 ## 自定义 Manager
 
-任何基于 [`WorkspaceBase`](/versions/2.0.5dev/zh/building-blocks/workspace) 构建的 workspace 类，都可以通过配一个 `WorkspaceManagerBase` 子类的方式接到智能体服务里。大多数情况下只需要写一小段准备 + 缓存的样板代码 —— 隔离策略由基类自动继承。
+任何基于 [`WorkspaceBase`](/versions/2.0.5dev/zh/building-blocks/workspace/overview) 构建的 workspace 类，都可以通过配一个 `WorkspaceManagerBase` 子类的方式接到智能体服务里。大多数情况下只需要写一小段准备 + 缓存的样板代码 —— 隔离策略由基类自动继承。
 
 ```python 自定义 Manager
 import asyncio

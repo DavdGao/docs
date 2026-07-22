@@ -16,7 +16,7 @@ In AgentScope, RAG is composed of the following **independently replaceable** mo
 This chapter focuses on **using RAG in non-service scenarios** — indexing files, retrieving knowledge, and integrating with an agent.
 
 <Tip>
-For embedding models and how to configure them, see the [Embedding Model chapter](/versions/2.0.5dev/en/building-blocks/model); for the service version of RAG (with an HTTP service, file hosting, and distributed indexing), see [RAG Service](/versions/2.0.5dev/en/deploy/rag).
+For embedding models and how to configure them, see the [Embedding Model chapter](/versions/2.0.5dev/en/building-blocks/model/embedding); for the service version of RAG (with an HTTP service, file hosting, and distributed indexing), see [RAG Service](/versions/2.0.5dev/en/deploy/rag).
 </Tip>
 
 ## Existing Implementations
@@ -30,11 +30,12 @@ AgentScope ships out-of-the-box default implementations for every module, all in
 | `TextParser` | Text parser: the entire file is returned as a single `Section` and split downstream by a chunker | `text/plain`<br/>`text/markdown`<br/>`text/csv`<br/>`text/html`<br/>`text/x-rst`<br/>`application/json`<br/>`application/xml`<br/>`application/x-yaml` |
 | `PDFParser` | PDF parser, **one `Section` per page**; the metadata carries a `page` field that starts at 1. | `application/pdf` |
 | `PPTParser` | PowerPoint (`.pptx`) parser, walks slides in order:<br/>- text/tables are merged into the same `Section`,<br/>- images are read as standalone `DataBlock`s.<br/>The metadata carries a `slide` field that starts at 1. | `application/vnd.openxmlformats-officedocument.presentationml.presentation` |
+| `WordParser` | Word (`.docx`) parser, walks the document element by element:<br/>- adjacent paragraphs (and, by default, tables) are merged into the same text `Section`,<br/>- embedded images are read as standalone `DataBlock`s. | `application/vnd.openxmlformats-officedocument.wordprocessingml.document` |
+| `ExcelParser` | Excel (`.xlsx` / `.xls`) parser, reads the workbook sheet by sheet:<br/>- each sheet's table is rendered as Markdown or JSON text,<br/>- embedded images (with `include_image=True`) are read as standalone `DataBlock`s.<br/>With `separate_sheet=True` the metadata carries a `sheet` field. | `application/vnd.openxmlformats-officedocument.spreadsheetml.sheet`<br/>`application/vnd.ms-excel` |
 | `ImageParser` | Image parser, reads the entire image as a single `Section` | `image/png`<br/>`image/jpeg`<br/>`image/gif`<br/>`image/bmp`<br/>`image/webp` |
-| In development ... |  | |
 
 <Tip>
-The PDF and PPT parsers depend on additional third-party libraries; install them in one shot with `pip install agentscope[rag]`.
+The PDF, PPT, Word, and Excel parsers depend on additional third-party libraries; install them in one shot with `pip install agentscope[rag]`.
 </Tip>
 
 ### Chunker
@@ -46,7 +47,7 @@ The PDF and PPT parsers depend on additional third-party libraries; install them
 
 ### Embedding Model
 
-See the [Embedding Model chapter](/versions/2.0.5dev/en/building-blocks/model).
+See the [Embedding Model chapter](/versions/2.0.5dev/en/building-blocks/model/embedding).
 
 ### Vector Database
 
@@ -54,10 +55,11 @@ See the [Embedding Model chapter](/versions/2.0.5dev/en/building-blocks/model).
 | --- | --- |
 | `QdrantStore` | Qdrant-based vector database implementation, supporting in-memory (`location=":memory:"`), local disk (`path=...`), and remote service (`url=...`) deployments |
 | `MilvusLiteStore` | Milvus Lite-based vector database implementation, supporting local persistent `.db` files (`uri="./rag_demo.db"`) and Milvus-compatible endpoint URIs |
-| In development ... |  |
+| `MongoDBStore` | MongoDB Vector Search-based implementation (Atlas or self-hosted); each knowledge base maps to one collection in the configured database. Fields used in `metadata_filter` must be declared via `filter_fields` at construction so they enter the vector index |
+| `ElasticsearchStore` | Elasticsearch-based implementation using dense-vector indexes with approximate kNN search; each knowledge base maps to one index |
 
 <Tip>
-Milvus Lite dependencies are optional. Install them with `pip install "agentscope[milvuslite]"` when you want to use `MilvusLiteStore`.
+Qdrant support ships with `pip install agentscope[rag]`. The other backends have their own optional extras: `agentscope[milvuslite]`, `agentscope[mongodb]`, and `agentscope[elasticsearch]`.
 </Tip>
 
 ## Using RAG
@@ -82,7 +84,7 @@ Indexing a file goes through three steps — **file parsing → chunking → emb
     The `file` parameter of `parse(file, filename)` accepts both **`bytes`** and **`str`**:
 
     - `bytes` is treated as the raw file content;
-    - `str` in a binary parser (`PDFParser` / `PPTParser` / `ImageParser`) is a **filesystem path** that the parser reads from disk for you;
+    - `str` in a binary parser (`PDFParser` / `PPTParser` / `WordParser` / `ExcelParser` / `ImageParser`) is a **filesystem path** that the parser reads from disk for you;
     - `str` in `TextParser` is disambiguated at runtime — if the string names an existing file it is read and decoded with the configured `encoding`; otherwise it is used verbatim as pre-decoded text.
 
     <CodeGroup>
@@ -130,6 +132,35 @@ Indexing a file goes through three steps — **file parsing → chunking → emb
 
     # File path
     sections = await parser.parse(file="./deck.pptx", filename="deck.pptx")
+    ```
+
+    ```python Word
+    from agentscope.rag import WordParser
+
+    parser = WordParser(
+        include_image=True,        # Whether to extract embedded images
+        separate_table=False,      # Whether to emit tables as their own Section
+        table_format="markdown",   # Table rendering: "markdown" or "json"
+    )
+
+    # File path
+    sections = await parser.parse(file="./doc.docx", filename="doc.docx")
+    ```
+
+    ```python Excel
+    from agentscope.rag import ExcelParser
+
+    parser = ExcelParser(
+        include_sheet_names=True,        # Prepend each sheet's name as a header
+        include_cell_coordinates=False,  # Include cell coordinates like [A1]
+        include_image=False,             # Whether to extract embedded images
+        separate_sheet=False,            # Keep sheets in separate Sections
+        table_format="markdown",         # Table rendering: "markdown" or "json"
+    )
+
+    # File path
+    sections = await parser.parse(file="./table.xlsx", filename="table.xlsx")
+    # With separate_sheet=True, each section.metadata contains {"sheet": "<name>"}
     ```
 
     ```python Image
@@ -192,13 +223,38 @@ Indexing a file goes through three steps — **file parsing → chunking → emb
     `KnowledgeBase` does not open or close the vector store connection itself; enter the `VectorStoreBase` instance in an `async with` block before using it.
     </Note>
 
-    To use Milvus Lite as a local persistent vector store, install `agentscope[milvuslite]` and replace only the vector store construction:
+    To use another backend, install its extra and replace only the vector store construction:
 
-    ```python
+    <CodeGroup>
+
+    ```python Milvus Lite
     from agentscope.rag import MilvusLiteStore
 
+    # Local persistent .db file; requires agentscope[milvuslite]
     store = MilvusLiteStore(uri="./rag_demo.db")
     ```
+
+    ```python MongoDB
+    from agentscope.rag import MongoDBStore
+
+    # MongoDB Vector Search (Atlas or self-hosted); requires agentscope[mongodb]
+    store = MongoDBStore(
+        uri="mongodb+srv://user:pass@cluster.mongodb.net",
+        database="agentscope_rag",
+        # Fields used in metadata_filter must be declared here,
+        # so they are included in the vector search index
+        filter_fields=["chunk.metadata.tenant_id"],
+    )
+    ```
+
+    ```python Elasticsearch
+    from agentscope.rag import ElasticsearchStore
+
+    # Dense-vector indexes with approximate kNN; requires agentscope[elasticsearch]
+    store = ElasticsearchStore(hosts="http://localhost:9200")
+    ```
+
+    </CodeGroup>
   </Step>
 </Steps>
 
@@ -540,7 +596,7 @@ Implementation notes:
   <Card title="Middleware" icon="layer-group" href="/versions/2.0.5dev/en/building-blocks/middleware" cta="Learn the middleware mechanism" arrow>
     See how `RAGMiddleware` plugs into the reply / reasoning hooks.
   </Card>
-  <Card title="Embedding Model" icon="cube" href="/versions/2.0.5dev/en/building-blocks/model" cta="View model list" arrow>
+  <Card title="Embedding Model" icon="cube" href="/versions/2.0.5dev/en/building-blocks/model/embedding" cta="View model list" arrow>
     Available embedding models and their parameters.
   </Card>
 </CardGroup>
