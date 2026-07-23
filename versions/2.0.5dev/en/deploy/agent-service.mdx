@@ -3,7 +3,7 @@ title: "Architecture"
 description: "Host your agent as a multi-tenant, multi-session HTTP service"
 ---
 
-Agent Service is the FastAPI-based hosting layer that turns AgentScope agents into a **multi-tenant, multi-session HTTP service**. It owns everything *around* the agent — request routing, per-user resource lifecycle, session state, persistence, scheduling, and tool offloading — so that the agent code you wrote against [`Agent`](/versions/2.0.5dev/en/building-blocks/agent) can serve production traffic without being rewritten.
+Agent Service is the FastAPI-based hosting layer that turns AgentScope agents into a **multi-tenant, multi-session HTTP service**. It owns everything *around* the agent — request routing, per-user resource lifecycle, session state, persistence, scheduling, and tool offloading — so that the agent code you wrote against [`Agent`](/versions/2.0.5dev/en/building-blocks/agent/overview) can serve production traffic without being rewritten.
 
 What sets it apart:
 
@@ -781,16 +781,16 @@ Routers receive application state through FastAPI's `Depends()`. The standard in
 ## Further Reading
 
 <CardGroup cols={2}>
-  <Card title="Agent" icon="robot" href="/versions/2.0.5dev/en/building-blocks/agent">
+  <Card title="Agent" icon="robot" href="/versions/2.0.5dev/en/building-blocks/agent/overview">
     Core agent abstraction and the ReAct loop
   </Card>
   <Card title="Message & Event" icon="envelope" href="/versions/2.0.5dev/en/building-blocks/message-and-event">
     Event streaming and message reconstruction
   </Card>
-  <Card title="Tool" icon="wrench" href="/versions/2.0.5dev/en/building-blocks/tool">
+  <Card title="Tool" icon="wrench" href="/versions/2.0.5dev/en/building-blocks/tool/overview">
     Built-in and custom tools including external execution
   </Card>
-  <Card title="Context" icon="database" href="/versions/2.0.5dev/en/building-blocks/context">
+  <Card title="Context" icon="database" href="/versions/2.0.5dev/en/building-blocks/context/overview">
     Context compression and workspace offloading
   </Card>
 </CardGroup>

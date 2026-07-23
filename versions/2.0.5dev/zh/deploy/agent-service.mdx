@@ -3,7 +3,7 @@ title: "架构"
 description: "把智能体部署为多租户、多会话的 HTTP 服务"
 ---
 
-智能体服务（Agent Service）是基于 FastAPI 把 AgentScope 的智能体转化为**多租户（Multi-tenant）、多会话（Multi-session）的 HTTP 服务**。它接管智能体*外围*的全部职责 —— 请求路由、按用户的资源生命周期、会话（Session）状态、持久化、调度（Schedule），以及工具调用的卸载，让基于 [`Agent`](/versions/2.0.5dev/zh/building-blocks/agent) 编写的代码无需重写即可承接生产流量。
+智能体服务（Agent Service）是基于 FastAPI 把 AgentScope 的智能体转化为**多租户（Multi-tenant）、多会话（Multi-session）的 HTTP 服务**。它接管智能体*外围*的全部职责 —— 请求路由、按用户的资源生命周期、会话（Session）状态、持久化、调度（Schedule），以及工具调用的卸载，让基于 [`Agent`](/versions/2.0.5dev/zh/building-blocks/agent/overview) 编写的代码无需重写即可承接生产流量。
 
 它的特点：
 
@@ -780,16 +780,16 @@ Router 通过 FastAPI 的 `Depends()` 拿到应用状态。标准注入项（位
 ## 延伸阅读
 
 <CardGroup cols={2}>
-  <Card title="Agent" icon="robot" href="/versions/2.0.5dev/zh/building-blocks/agent">
+  <Card title="Agent" icon="robot" href="/versions/2.0.5dev/zh/building-blocks/agent/overview">
     核心智能体抽象与 ReAct 循环
   </Card>
   <Card title="Message & Event" icon="envelope" href="/versions/2.0.5dev/zh/building-blocks/message-and-event">
     事件流与消息重建
   </Card>
-  <Card title="Tool" icon="wrench" href="/versions/2.0.5dev/zh/building-blocks/tool">
+  <Card title="Tool" icon="wrench" href="/versions/2.0.5dev/zh/building-blocks/tool/overview">
     内置与自定义工具，包括外部执行
   </Card>
-  <Card title="Context" icon="database" href="/versions/2.0.5dev/zh/building-blocks/context">
+  <Card title="Context" icon="database" href="/versions/2.0.5dev/zh/building-blocks/context/overview">
     上下文压缩与工作区 offloading
   </Card>
 </CardGroup>

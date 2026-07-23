@@ -32,7 +32,10 @@ The `Msg` class has the following core fields:
 | `metadata`    | `dict`                              | Arbitrary key-value metadata                      |
 | `created_at`  | `str`                               | ISO 8601 timestamp of creation                    |
 | `finished_at` | `str \| None`                       | ISO 8601 timestamp when the message was finalized |
-| `usage`       | `Usage`                             | Token usage statistics (for assistant messages)   |
+| `usage`       | `Usage \| None`                     | Token usage statistics (for assistant messages)   |
+| `finished_reason` | `ReplyFinishedReason \| None`   | How the reply ended: `completed` / `interrupted` / `exceed_max_iters` / `error`; `None` means paused, not finished |
+| `structured_output` | `dict \| None`                | The validated structured result when the reply required a [structured schema](/versions/2.0.5dev/en/building-blocks/agent/run-agent#structured-output); set by the agent on the final message |
+| `error`       | `ErrorInfo \| None`                 | Structured error info, populated only when `finished_reason` is `error` |
 
 ### Content Blocks
 
@@ -317,6 +320,8 @@ Events are grouped by category below. Every event also carries a `reply_id` fiel
     |-------|------|-------------|
     | `reply_id` | `str` | ID of the reply message |
     | `session_id` | `str` | ID of the session |
+    | `finished_reason` | `ReplyFinishedReason` | How the reply ended: `completed` / `interrupted` / `exceed_max_iters` / `error` |
+    | `error` | `ErrorInfo \| None` | Structured error info, populated only when `finished_reason` is `error` |
 
     **ExceedMaxItersEvent** — Agent reached the maximum reasoning-acting iterations.
 
@@ -555,7 +560,8 @@ The `append_event` method handles all event types:
 
 | Event Type | Effect on Msg |
 |------------|---------------|
-| `ReplyEndEvent` | Sets `finished_at` timestamp |
+| `ReplyEndEvent` | Sets `finished_at`, `finished_reason`, and `error` |
+| `ModelCallEndEvent` | Accumulates `input_tokens` / `output_tokens` into `usage` |
 | `TextBlockStartEvent` | Appends a new empty `TextBlock` |
 | `TextBlockDeltaEvent` | Concatenates `delta` to the block's text |
 | `DataBlockStartEvent` | Appends a new empty `DataBlock` |
@@ -647,10 +653,10 @@ async for event in agent.reply_stream(UserMsg("user", "Fix the bug")):
 ## Further Reading
 
 <CardGroup cols={2}>
-  <Card title="Agent" icon="robot" href="/versions/2.0.5dev/en/building-blocks/agent">
+  <Card title="Agent" icon="robot" href="/versions/2.0.5dev/en/building-blocks/agent/overview">
     How the agent produces events and messages in the ReAct loop
   </Card>
-  <Card title="Context" icon="database" href="/versions/2.0.5dev/en/building-blocks/context">
+  <Card title="Context" icon="database" href="/versions/2.0.5dev/en/building-blocks/context/overview">
     How messages are stored, compressed, and offloaded
   </Card>
 </CardGroup>

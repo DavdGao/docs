@@ -16,7 +16,7 @@ AgentScope 中的 RAG 由如下**可独立替换**的功能模块组成：
 本章主要介绍**在非服务化场景下**使用 RAG 功能，包括索引文件、检索知识、集成到智能体等。
 
 <Tip>
-嵌入模型的介绍和配置方式请见[嵌入模型章节](/versions/2.0.5dev/zh/building-blocks/model)；服务化版本的 RAG（带 HTTP 服务、文件托管、分布式索引）请见 [RAG 服务](/versions/2.0.5dev/zh/deploy/rag)。
+嵌入模型的介绍和配置方式请见[嵌入模型章节](/versions/2.0.5dev/zh/building-blocks/model/embedding)；服务化版本的 RAG（带 HTTP 服务、文件托管、分布式索引）请见 [RAG 服务](/versions/2.0.5dev/zh/deploy/rag)。
 </Tip>
 
 ## 现有实现
@@ -30,11 +30,12 @@ AgentScope 为每个模块提供了开箱即用的默认实现，全部基于基
 | `TextParser`  | 文本数据解析器，整文件作为一个 `Section` 返回，由下游切块器切分                                                                                               | `text/plain`<br/>`text/markdown`<br/>`text/csv`<br/>`text/html`<br/>`text/x-rst`<br/>`application/json`<br/>`application/xml`<br/>`application/x-yaml` |
 | `PDFParser`   | PDF 解析器，**每页一个 `Section`**，元信息中携带从 1 开始的页码 `page` 字段。                                                                  | `application/pdf`                                                                                                                                      |
 | `PPTParser`   | PowerPoint (`.pptx`) 解析器，按幻灯片顺序遍历形状：<br/>- 文本/表格合并为同一 `Section`，<br/>- 图片作为独立 `DataBlock` 读取。<br/>元信息中携带从 1 开始的幻灯片序号 `slide` 字段。 | `application/vnd.openxmlformats-officedocument.presentationml.presentation`                                                                            |
+| `WordParser` | Word（`.docx`）解析器，按文档元素顺序遍历：<br/>- 相邻段落（默认含表格）合并为同一文本 `Section`，<br/>- 内嵌图片作为独立 `DataBlock` 读取。 | `application/vnd.openxmlformats-officedocument.wordprocessingml.document` |
+| `ExcelParser` | Excel（`.xlsx` / `.xls`）解析器，按工作表顺序读取：<br/>- 每张表的内容渲染为 Markdown 或 JSON 文本，<br/>- 内嵌图片（`include_image=True` 时）作为独立 `DataBlock` 读取。<br/>`separate_sheet=True` 时元信息携带 `sheet` 字段。 | `application/vnd.openxmlformats-officedocument.spreadsheetml.sheet`<br/>`application/vnd.ms-excel` |
 | `ImageParser` | 图片解析器，将整张图片读取为一个 `Section`                                                              | `image/png`<br/>`image/jpeg`<br/>`image/gif`<br/>`image/bmp`<br/>`image/webp`                                                                          |
-| 开发中 ...     |                                                                                                                                     |                                                                                                                                                        |
 
 <Tip>
-PDF 与 PPT 解析依赖额外的第三方库，可以通过 `pip install agentscope[rag]` 一次性安装。
+PDF、PPT、Word、Excel 解析依赖额外的第三方库，可以通过 `pip install agentscope[rag]` 一次性安装。
 </Tip>
 
 ### 切块器
@@ -46,7 +47,7 @@ PDF 与 PPT 解析依赖额外的第三方库，可以通过 `pip install agents
 
 ### 嵌入模型
 
-请见[嵌入模型章节](/versions/2.0.5dev/zh/building-blocks/model)。
+请见[嵌入模型章节](/versions/2.0.5dev/zh/building-blocks/model/embedding)。
 
 ### 向量数据库
 
@@ -54,10 +55,11 @@ PDF 与 PPT 解析依赖额外的第三方库，可以通过 `pip install agents
 | --- | --- |
 | `QdrantStore` | 基于 Qdrant 的向量数据库实现，支持内存（`location=":memory:"`）、本地磁盘（`path=...`）、远程服务（`url=...`）三种部署方式 |
 | `MilvusLiteStore` | 基于 Milvus Lite 的向量数据库实现，支持本地持久化 `.db` 文件（`uri="./rag_demo.db"`）以及 Milvus 兼容的服务端 URI |
-| 开发中 ... |  |
+| `MongoDBStore` | 基于 MongoDB Vector Search 的实现（Atlas 或自建集群），每个知识库对应指定数据库中的一个集合。`metadata_filter` 会用到的字段必须在构造时通过 `filter_fields` 声明，才会进入向量索引 |
+| `ElasticsearchStore` | 基于 Elasticsearch 稠密向量索引的实现，使用近似 kNN 检索，每个知识库对应一个索引 |
 
 <Tip>
-Milvus Lite 相关依赖是可选依赖。如需使用 `MilvusLiteStore`，请先通过 `pip install "agentscope[milvuslite]"` 安装。
+Qdrant 支持已包含在 `pip install agentscope[rag]` 中。其余后端各有独立的可选依赖：`agentscope[milvuslite]`、`agentscope[mongodb]`、`agentscope[elasticsearch]`。
 </Tip>
 
 ## RAG 使用
@@ -82,7 +84,7 @@ AgentScope 推荐通过**知识库句柄 `KnowledgeBase`** 作为入口使用 RA
     `parse(file, filename)` 的 `file` 参数同时支持 **`bytes`** 与 **`str`**：
 
     - `bytes` 直接作为原始文件内容；
-    - `str` 在二进制解析器（`PDFParser` / `PPTParser` / `ImageParser`）中表示**文件路径**，解析器自动读盘；
+    - `str` 在二进制解析器（`PDFParser` / `PPTParser` / `WordParser` / `ExcelParser` / `ImageParser`）中表示**文件路径**，解析器自动读盘；
     - `str` 在 `TextParser` 中按运行时判断——若该字符串指向一个存在的文件就当作路径读盘并按 `encoding` 解码，否则当作已解码的文本内容直接使用。
 
     <CodeGroup>
@@ -130,6 +132,35 @@ AgentScope 推荐通过**知识库句柄 `KnowledgeBase`** 作为入口使用 RA
 
     # 文件路径
     sections = await parser.parse(file="./deck.pptx", filename="deck.pptx")
+    ```
+
+    ```python Word
+    from agentscope.rag import WordParser
+
+    parser = WordParser(
+        include_image=True,        # 是否抽取嵌入的图片
+        separate_table=False,      # 是否把表格独立为单独的 Section
+        table_format="markdown",   # 表格渲染格式："markdown" 或 "json"
+    )
+
+    # 文件路径
+    sections = await parser.parse(file="./doc.docx", filename="doc.docx")
+    ```
+
+    ```python Excel
+    from agentscope.rag import ExcelParser
+
+    parser = ExcelParser(
+        include_sheet_names=True,        # 是否把工作表名作为标题前置
+        include_cell_coordinates=False,  # 是否携带 [A1] 这样的单元格坐标
+        include_image=False,             # 是否抽取嵌入的图片
+        separate_sheet=False,            # 是否让各工作表的内容互不混合
+        table_format="markdown",         # 表格渲染格式："markdown" 或 "json"
+    )
+
+    # 文件路径
+    sections = await parser.parse(file="./table.xlsx", filename="table.xlsx")
+    # separate_sheet=True 时，各 section.metadata 携带 {"sheet": "<工作表名>"}
     ```
 
     ```python 图片
@@ -192,13 +223,38 @@ AgentScope 推荐通过**知识库句柄 `KnowledgeBase`** 作为入口使用 RA
     `KnowledgeBase` 不会自己创建 / 关闭向量库连接，使用前需要先把 `VectorStoreBase` 实例置于 `async with` 上下文中。
     </Note>
 
-    如果希望使用 Milvus Lite 作为本地持久化向量库，安装 `agentscope[milvuslite]` 后，只需要替换向量库的构造方式：
+    如果希望使用其他后端，安装对应的可选依赖后，只需要替换向量库的构造方式：
 
-    ```python
+    <CodeGroup>
+
+    ```python Milvus Lite
     from agentscope.rag import MilvusLiteStore
 
+    # 本地持久化 .db 文件；需要 agentscope[milvuslite]
     store = MilvusLiteStore(uri="./rag_demo.db")
     ```
+
+    ```python MongoDB
+    from agentscope.rag import MongoDBStore
+
+    # MongoDB Vector Search（Atlas 或自建集群）；需要 agentscope[mongodb]
+    store = MongoDBStore(
+        uri="mongodb+srv://user:pass@cluster.mongodb.net",
+        database="agentscope_rag",
+        # metadata_filter 会用到的字段必须在这里声明，
+        # 才会被纳入向量检索索引
+        filter_fields=["chunk.metadata.tenant_id"],
+    )
+    ```
+
+    ```python Elasticsearch
+    from agentscope.rag import ElasticsearchStore
+
+    # 稠密向量索引 + 近似 kNN 检索；需要 agentscope[elasticsearch]
+    store = ElasticsearchStore(hosts="http://localhost:9200")
+    ```
+
+    </CodeGroup>
   </Step>
 </Steps>
 
@@ -539,7 +595,7 @@ class MyVectorStore(VectorStoreBase):
   <Card title="中间件" icon="layer-group" href="/versions/2.0.5dev/zh/building-blocks/middleware" cta="了解中间件机制" arrow>
     了解 `RAGMiddleware` 是如何嵌入 reply / reasoning 钩子的。
   </Card>
-  <Card title="嵌入模型" icon="cube" href="/versions/2.0.5dev/zh/building-blocks/model" cta="查看模型列表" arrow>
+  <Card title="嵌入模型" icon="cube" href="/versions/2.0.5dev/zh/building-blocks/model/embedding" cta="查看模型列表" arrow>
     可用的嵌入模型及其参数。
   </Card>
 </CardGroup>
