@@ -34,6 +34,39 @@ description: "在任意后端上创建工作区，并接入智能体"
     ```
   </Tab>
 
+  <Tab title="Bubblewrap">
+    `BubblewrapWorkspace` 通过 [bubblewrap](https://github.com/containers/bubblewrap)（`bwrap`）执行每一条命令，无需守护进程或云端账号，只要 Linux 主机上装有 `bwrap` 即可。`host_workdir` 以读写方式挂载到沙箱内的 `/workspace`，用于保存状态；不传该参数则使用临时目录，关闭时一并删除。
+
+    ```
+    {host_workdir}/    # 主机目录，挂载到沙箱内的 /workspace
+    ├── .agentscope    # 网关虚拟环境与运行时文件
+    ├── .mcp           # 已注册的 MCP 客户端配置（JSON 数组）
+    ├── data/          # 卸载的多模态数据
+    ├── skills/        # 技能子目录，每个含 SKILL.md
+    └── sessions/      # 每个会话的 context.jsonl 与工具结果文件
+    ```
+
+    ```python
+    from agentscope.workspace import BubblewrapWorkspace
+
+    workspace = BubblewrapWorkspace(
+        host_workdir="/data/bwrap-workspaces/agent-1",  # 挂载到 /workspace
+        host_cache_dir=None,        # None 表示使用工作区私有的包缓存目录
+        gateway_port=None,          # None 表示自动选择可用的回环端口
+        extra_pip=["numpy", "pandas"],
+        default_mcps=[],
+        skill_paths=["./skills/web-search"],
+    )
+    await workspace.initialize()
+    ```
+
+    <Warning>
+    该工作区**不隔离网络**。MCP 网关需要在多次 `bwrap` 执行之间通过主机回环地址访问，因此 `share_net` 必须保持为 `True`，沙箱内的代码与主机共享网络命名空间：主机能访问的服务它都能访问，包括其他回环服务与云环境的元数据地址。除网络命名空间外，bubblewrap 仍然隔离其余命名空间与挂载的文件系统。如果业务同时需要网络隔离，请改用 Docker、K8s 或云沙箱。
+    </Warning>
+
+    显式传入的 `host_cache_dir` 不能与 `host_workdir` 重叠；多个工作区共用同一缓存目录会以隔离性换取更快的初始化速度，仅建议在互相信任的工作区之间使用。
+  </Tab>
+
   <Tab title="Docker">
     `DockerWorkspace` 把主机 `workdir` 挂载到容器内的 `/workspace`，因此下面的目录位于主机上，容器重启后依然存在。不传 `workdir` 则得到一个纯临时容器，可写层随容器一起消失。
 

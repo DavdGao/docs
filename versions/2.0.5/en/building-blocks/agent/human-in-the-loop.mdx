@@ -139,5 +139,9 @@ If multiple tool calls require outside interaction and only partial confirmation
 </Note>
 
 <Tip>
+Confirmations are de-duplicated inside one concurrent batch: when several tool calls run in parallel and a later call is already covered by the rule suggested by an earlier confirmation in the same batch, it is not surfaced a second time. Safety ASKs are never de-duplicated this way.
+</Tip>
+
+<Tip>
 Use `reply_stream` when building interactive UIs: it lets you detect pause events in real time and prompt the user immediately. Use `reply` when you have pre-built automation that handles events programmatically.
 </Tip>

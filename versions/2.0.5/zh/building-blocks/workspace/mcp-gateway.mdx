@@ -3,7 +3,7 @@ title: "MCP 网关"
 description: "沙箱类工作区如何把内部的 MCP 服务暴露给主机"
 ---
 
-沙箱类工作区（Docker、E2B、Daytona、K8s、OpenSandbox）无法直接注册主机侧的 MCP 客户端：MCP 服务器运行在容器或沙箱内部，stdio 会话无法跨越这条边界。AgentScope 通过 **MCP 网关**解决这个问题：一个运行在工作区*内部*的轻量 FastAPI 进程，持有上游 MCP 会话，并通过一个带鉴权的 HTTP 端点统一暴露给主机。
+沙箱类工作区（Bubblewrap、Docker、E2B、Daytona、K8s、OpenSandbox）无法直接注册主机侧的 MCP 客户端：MCP 服务器运行在容器或沙箱内部，stdio 会话无法跨越这条边界。AgentScope 通过 **MCP 网关**解决这个问题：一个运行在工作区*内部*的轻量 FastAPI 进程，持有上游 MCP 会话，并通过一个带鉴权的 HTTP 端点统一暴露给主机。
 
 ```mermaid
 flowchart LR
@@ -32,3 +32,10 @@ flowchart LR
 <Note>
 网关**不会**发布在主机可达的网络端口上。每次主机到网关的调用都在沙箱*内部*执行：`GatewayMCPClient` 通过后端的 `exec_shell` 以 `curl` 命令发起请求，网关始终只监听沙箱自身的回环地址。由于沙箱没有对外监听的服务，这一设计避免了对外开放网关端口带来的攻击面。
 </Note>
+
+`BubblewrapWorkspace` 是例外：它与主机共享网络命名空间，沙箱的回环地址即主机回环地址，主机上的其他进程有可能访问到该端口。因此它额外启用了两道防护：
+
+| 防护措施 | 作用 |
+|----------|------|
+| Bearer 令牌 | 网关要求携带该工作区专属的令牌，即使其他进程发现了端口，也无法驱动其中的 MCP 服务 |
+| 实例随机数 | `/health` 探测不携带令牌，且响应中必须包含本次启动网关时生成的随机数，避免端口竞争把令牌泄露给无关进程 |

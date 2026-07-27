@@ -34,6 +34,39 @@ Each backend has its own persistence model and directory layout. Pick the tab ma
     ```
   </Tab>
 
+  <Tab title="Bubblewrap">
+    `BubblewrapWorkspace` runs every command through [bubblewrap](https://github.com/containers/bubblewrap) (`bwrap`), so it needs no daemon or cloud account, only the `bwrap` binary on a Linux host. `host_workdir` is mounted read-write at `/workspace` and holds the persisted state; omit it for an ephemeral temp directory removed on close.
+
+    ```
+    {host_workdir}/    # host directory, mounted at /workspace in the sandbox
+    ├── .agentscope    # gateway venv and runtime files
+    ├── .mcp           # registered MCP client configs (JSON array)
+    ├── data/          # offloaded multimodal payloads
+    ├── skills/        # skill subdirectories, each with SKILL.md
+    └── sessions/      # per-session context.jsonl and tool-result files
+    ```
+
+    ```python
+    from agentscope.workspace import BubblewrapWorkspace
+
+    workspace = BubblewrapWorkspace(
+        host_workdir="/data/bwrap-workspaces/agent-1",  # mounted at /workspace
+        host_cache_dir=None,        # None keeps a workspace-private package cache
+        gateway_port=None,          # None picks an available loopback port
+        extra_pip=["numpy", "pandas"],
+        default_mcps=[],
+        skill_paths=["./skills/web-search"],
+    )
+    await workspace.initialize()
+    ```
+
+    <Warning>
+    This is **not** a network sandbox. The MCP gateway is reached over host loopback across separate `bwrap` executions, so `share_net` must stay `True` and sandboxed code shares the host network namespace: it can reach any service the host can, including other loopback services and cloud metadata endpoints. Bubblewrap still isolates the other namespaces and the mounted filesystem. Use Docker, K8s, or a cloud sandbox when the workload also needs network isolation.
+    </Warning>
+
+    An explicit `host_cache_dir` must not overlap `host_workdir`; sharing one cache directory across workspaces trades isolation for faster bootstrap and should be limited to mutually trusted workspaces.
+  </Tab>
+
   <Tab title="Docker">
     `DockerWorkspace` bind-mounts the host `workdir` to `/workspace` inside the container, so the layout below lives on the host and survives container restarts. Omit `workdir` for a purely ephemeral container whose writable layer disappears with it.
 

@@ -11,11 +11,12 @@ description: "为智能体提供可执行、可持久化的运行环境"
 | 技能 | 存放在 `skills/` 目录下的 Markdown 指令集，供智能体的 `Skill` 查看器读取 |
 | 上下文卸载 | 通过 `Offloader` 协议持久化被压缩的消息与被截断的工具结果 |
 
-AgentScope 提供六种工作区实现，各对应一种运行环境。所有实现共享同一接口，同一份智能体代码可以运行在任意后端上：
+AgentScope 提供七种工作区实现，各对应一种运行环境。所有实现共享同一接口，同一份智能体代码可以运行在任意后端上：
 
 | 类 | 运行环境 | 持久化方式 |
 |----|----------|-----------|
 | `LocalWorkspace` | 本机文件系统 | 主机上的 `workdir` 目录 |
+| `BubblewrapWorkspace` | Linux [bubblewrap](https://github.com/containers/bubblewrap) 沙箱 | 主机 `host_workdir` 挂载到沙箱内 `/workspace`；不传则使用关闭时删除的临时目录 |
 | `DockerWorkspace` | Docker 容器 | 主机 `workdir` 挂载到容器内 `/workspace`；不传则为临时容器 |
 | `E2BWorkspace` | [E2B](https://e2b.dev) 云沙箱 | 沙箱文件系统；通过沙箱元数据重新挂接 |
 | `DaytonaWorkspace` | [Daytona](https://www.daytona.io) 沙箱 | 沙箱文件系统；通过沙箱标签重新挂接 |
@@ -33,7 +34,7 @@ AgentScope 提供六种工作区实现，各对应一种运行环境。所有实
 | 上下文卸载 | `offload_context()` / `offload_tool_result()` | 智能体，在压缩或截断触发时 |
 | 动态管理 | `add_mcp()` / `remove_mcp()` / `add_skill()` / `remove_skill()` | 开发者或服务，在运行时 |
 
-对于沙箱类后端（Docker、E2B、Daytona、K8s、OpenSandbox），MCP 服务器运行在隔离环境*内部*，主机通过工作区内的网关访问它们，详见 [MCP 网关](/versions/2.0.5/zh/building-blocks/workspace/mcp-gateway)。
+对于沙箱类后端（Bubblewrap、Docker、E2B、Daytona、K8s、OpenSandbox），MCP 服务器运行在隔离环境*内部*，主机通过工作区内的网关访问它们，详见 [MCP 网关](/versions/2.0.5/zh/building-blocks/workspace/mcp-gateway)。
 
 ## 延伸阅读
 

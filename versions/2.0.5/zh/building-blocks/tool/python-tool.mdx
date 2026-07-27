@@ -51,6 +51,7 @@ AgentScope 预置了一组覆盖常见智能体操作的工具，实例化后传
 | 工具 | 说明 | 只读 |
 |------|------|------|
 | `Bash` | 执行 shell 命令 | 否 |
+| `PowerShell` | 在 Windows 上执行 PowerShell 命令 | 否 |
 | `Read` | 按行号读取文件内容 | 是 |
 | `Write` | 创建或覆写文件 | 否 |
 | `Edit` | 在文件中做精确字符串替换 | 否 |
@@ -102,6 +103,30 @@ bash = Bash(
 )
 ```
 
+### PowerShell
+
+`PowerShell` 是 `Bash` 在 Windows 上的对应工具。当宿主机为 Windows 时，`LocalWorkspace.list_tools()` 会返回 `PowerShell` 而非 `Bash`，因此同一份智能体代码可以在两种平台上运行：
+
+```python
+from agentscope.tool import PowerShell
+
+pwsh = PowerShell(cwd="C:\\Users\\me\\project")
+```
+
+它的执行方式与 `Bash` 存在以下差异：
+
+| 方面 | 行为 |
+|------|------|
+| 可执行程序 | 优先使用 `pwsh`（PowerShell 6+），不可用时回退到 `powershell.exe`；探测只执行一次并缓存结果 |
+| 会话状态 | 每条命令都以 `-NoProfile -NonInteractive` 运行，不加载用户配置文件，变量、当前目录等会话状态也不会在命令之间保留 |
+| 编码 | 命令以 UTF-16LE base64 的 `-EncodedCommand` 形式传入，引号与非 ASCII 字符不会被破坏 |
+| 超时 | `timeout` 参数以毫秒计，默认 120000，上限 600000 |
+| 输出 | stdout 与 stderr 合并返回，超过 30000 字符后截断 |
+
+<Warning>
+`check_permissions()` 对**任何** PowerShell 命令都返回 ASK。`Bash` 中用于自动放行只读命令的静态命令分析尚未在 PowerShell 上实现，因此没有命令会被判定为安全。该 ASK 是普通的确认请求，允许规则与 `BYPASS` 模式仍可覆盖；同时 `generate_suggestions()` 不会给出任何规则建议，以保持权限边界的保守性。
+</Warning>
+
 ### 文件工具
 
 文件工具强制执行「先读后写」规则：`Write` 与 `Edit` 要求目标文件先经由 `Read` 读取过。这避免了盲目覆写，并保证智能体总是基于最新内容进行操作。
@@ -138,7 +163,7 @@ bash = Bash(
 
 ## 切换工具后端
 
-AgentScope 中的 `Bash`、`Grep`、`Glob`、`Read`、`Write`、`Edit` 工具支持后端切换，即将运行逻辑委派到不同的执行环境中，例如本地文件系统、Docker 容器、E2B 沙箱等。
+AgentScope 中的 `Bash`、`PowerShell`、`Grep`、`Glob`、`Read`、`Write`、`Edit` 工具支持后端切换，即将运行逻辑委派到不同的执行环境中，例如本地文件系统、Docker 容器、E2B 沙箱等。
 
 通过指定 `backend` 参数即可切换后端，而 `backend` 实例可以通过 `Workspace` 实例获取，默认为本地环境。关于 `Workspace` 的更多信息，请参见[工作空间](/versions/2.0.5/zh/building-blocks/workspace/overview)章节。
 

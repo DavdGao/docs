@@ -51,6 +51,7 @@ AgentScope ships a set of ready-to-use tools covering common agent operations. I
 | Tool | Description | Read-only |
 |------|-------------|-----------|
 | `Bash` | Execute shell commands | No |
+| `PowerShell` | Execute PowerShell commands on Windows | No |
 | `Read` | Read file contents with line numbers | Yes |
 | `Write` | Create or overwrite files | No |
 | `Edit` | Perform exact string replacements in files | No |
@@ -102,6 +103,30 @@ bash = Bash(
 )
 ```
 
+### PowerShell
+
+The `PowerShell` tool is the Windows counterpart of `Bash`. `LocalWorkspace.list_tools()` returns it in place of `Bash` when the host is Windows, so the same agent code works on both platforms:
+
+```python
+from agentscope.tool import PowerShell
+
+pwsh = PowerShell(cwd="C:\\Users\\me\\project")
+```
+
+Its execution model differs from `Bash` in a few ways:
+
+| Aspect | Behavior |
+|--------|----------|
+| Executable | Prefers `pwsh` (PowerShell 6+) and falls back to `powershell.exe`; the probe runs once and the result is cached |
+| Session state | Every command runs with `-NoProfile -NonInteractive`, so neither the user profile nor session state (variables, current location) carries over between calls |
+| Encoding | The command is sent as a UTF-16LE base64 `-EncodedCommand`, so quoting and non-ASCII characters survive intact |
+| Timeout | The `timeout` argument is in milliseconds: 120000 by default, capped at 600000 |
+| Output | stdout and stderr are returned together and truncated at 30000 characters |
+
+<Warning>
+`check_permissions()` returns ASK for **every** PowerShell command. The static command analysis that lets `Bash` auto-allow read-only commands is not yet implemented for PowerShell, so no command is classified as safe. This is a regular ASK that allow rules and `BYPASS` mode can still override, and `generate_suggestions()` deliberately proposes no rules to keep the permission boundary conservative.
+</Warning>
+
 ### File Tools (Read, Write, Edit)
 
 The file tools enforce a read-before-write rule: `Write` and `Edit` require the target file to have been read via `Read` first. This prevents blind overwrites and ensures the agent always operates on current content.
@@ -138,7 +163,7 @@ See [Plan](/versions/2.0.5/en/building-blocks/plan) for the full task lifecycle,
 
 ## Switch Tool Backend
 
-The `Bash`, `Grep`, `Glob`, `Read`, `Write`, and `Edit` tools in AgentScope support backend switching: delegating their execution to different runtime environments such as the local filesystem, a Docker container, an E2B sandbox, and so on.
+The `Bash`, `PowerShell`, `Grep`, `Glob`, `Read`, `Write`, and `Edit` tools in AgentScope support backend switching: delegating their execution to different runtime environments such as the local filesystem, a Docker container, an E2B sandbox, and so on.
 
 A backend is selected via the `backend` argument. Backend instances are obtained from a `Workspace`, which defaults to the local environment. See [Workspace](/versions/2.0.5/en/building-blocks/workspace/overview) for more details.
 
