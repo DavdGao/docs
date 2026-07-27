@@ -15,6 +15,111 @@
         "default": true,
         "versions": [
           {
+            "version": "2.0.6dev",
+            "tabs": [
+              {
+                "tab": "Guides",
+                "groups": [
+                  {
+                    "group": "Get Started",
+                    "pages": [
+                      "versions/2.0.6dev/en/index",
+                      "versions/2.0.6dev/en/quickstart",
+                      "versions/2.0.6dev/en/release-notes"
+                    ]
+                  },
+                  {
+                    "group": "Building Blocks",
+                    "pages": [
+                      "versions/2.0.6dev/en/building-blocks/message-and-event",
+                      {
+                        "group": "Agent",
+                        "pages": [
+                          "versions/2.0.6dev/en/building-blocks/agent/overview",
+                          "versions/2.0.6dev/en/building-blocks/agent/configure-agent",
+                          "versions/2.0.6dev/en/building-blocks/agent/run-agent",
+                          "versions/2.0.6dev/en/building-blocks/agent/interrupt-agent",
+                          "versions/2.0.6dev/en/building-blocks/agent/human-in-the-loop"
+                        ]
+                      },
+                      {
+                        "group": "Model",
+                        "pages": [
+                          "versions/2.0.6dev/en/building-blocks/model/overview",
+                          "versions/2.0.6dev/en/building-blocks/model/llm",
+                          "versions/2.0.6dev/en/building-blocks/model/tts",
+                          "versions/2.0.6dev/en/building-blocks/model/embedding"
+                        ]
+                      },
+                      {
+                        "group": "Context",
+                        "pages": [
+                          "versions/2.0.6dev/en/building-blocks/context/overview",
+                          "versions/2.0.6dev/en/building-blocks/context/environment-awareness",
+                          "versions/2.0.6dev/en/building-blocks/context/compress-context",
+                          "versions/2.0.6dev/en/building-blocks/context/offload-context"
+                        ]
+                      },
+                      {
+                        "group": "Tool",
+                        "pages": [
+                          "versions/2.0.6dev/en/building-blocks/tool/overview",
+                          "versions/2.0.6dev/en/building-blocks/tool/python-tool",
+                          "versions/2.0.6dev/en/building-blocks/tool/mcp",
+                          "versions/2.0.6dev/en/building-blocks/tool/skill",
+                          "versions/2.0.6dev/en/building-blocks/tool/manage-tools"
+                        ]
+                      },
+                      "versions/2.0.6dev/en/building-blocks/plan",
+                      {
+                        "group": "Permission System",
+                        "pages": [
+                          "versions/2.0.6dev/en/building-blocks/permission-system/overview",
+                          "versions/2.0.6dev/en/building-blocks/permission-system/permission-mode",
+                          "versions/2.0.6dev/en/building-blocks/permission-system/permission-rule",
+                          "versions/2.0.6dev/en/building-blocks/permission-system/tool-check"
+                        ]
+                      },
+                      "versions/2.0.6dev/en/building-blocks/middleware",
+                      "versions/2.0.6dev/en/building-blocks/rag",
+                      "versions/2.0.6dev/en/building-blocks/long-term-memory",
+                      {
+                        "group": "Workspace",
+                        "pages": [
+                          "versions/2.0.6dev/en/building-blocks/workspace/overview",
+                          "versions/2.0.6dev/en/building-blocks/workspace/run-workspace",
+                          "versions/2.0.6dev/en/building-blocks/workspace/manage-resources",
+                          "versions/2.0.6dev/en/building-blocks/workspace/mcp-gateway"
+                        ]
+                      }
+                    ]
+                  },
+                  {
+                    "group": "Agent as Service",
+                    "pages": [
+                      "versions/2.0.6dev/en/deploy/agent-service",
+                      "versions/2.0.6dev/en/deploy/agent-team",
+                      "versions/2.0.6dev/en/deploy/sharing",
+                      "versions/2.0.6dev/en/deploy/rag",
+                      "versions/2.0.6dev/en/deploy/workspace-manager",
+                      {
+                        "group": "API",
+                        "openapi": "versions/2.0.6dev/en/deploy/openapi.json"
+                      }
+                    ]
+                  },
+                  {
+                    "group": "Others",
+                    "pages": [
+                      "versions/2.0.6dev/en/others/faq",
+                      "versions/2.0.6dev/en/others/change-log"
+                    ]
+                  }
+                ]
+              }
+            ]
+          },
+          {
             "version": "2.0.5",
             "tabs": [
               {
@@ -370,6 +475,111 @@
         "language": "zh",
         "versions": [
           {
+            "version": "2.0.6dev",
+            "tabs": [
+              {
+                "tab": "指南",
+                "groups": [
+                  {
+                    "group": "快速开始",
+                    "pages": [
+                      "versions/2.0.6dev/zh/index",
+                      "versions/2.0.6dev/zh/quickstart",
+                      "versions/2.0.6dev/zh/release-notes"
+                    ]
+                  },
+                  {
+                    "group": "核心模块",
+                    "pages": [
+                      "versions/2.0.6dev/zh/building-blocks/message-and-event",
+                      {
+                        "group": "智能体",
+                        "pages": [
+                          "versions/2.0.6dev/zh/building-blocks/agent/overview",
+                          "versions/2.0.6dev/zh/building-blocks/agent/configure-agent",
+                          "versions/2.0.6dev/zh/building-blocks/agent/run-agent",
+                          "versions/2.0.6dev/zh/building-blocks/agent/interrupt-agent",
+                          "versions/2.0.6dev/zh/building-blocks/agent/human-in-the-loop"
+                        ]
+                      },
+                      {
+                        "group": "模型",
+                        "pages": [
+                          "versions/2.0.6dev/zh/building-blocks/model/overview",
+                          "versions/2.0.6dev/zh/building-blocks/model/llm",
+                          "versions/2.0.6dev/zh/building-blocks/model/tts",
+                          "versions/2.0.6dev/zh/building-blocks/model/embedding"
+                        ]
+                      },
+                      {
+                        "group": "上下文管理",
+                        "pages": [
+                          "versions/2.0.6dev/zh/building-blocks/context/overview",
+                          "versions/2.0.6dev/zh/building-blocks/context/environment-awareness",
+                          "versions/2.0.6dev/zh/building-blocks/context/compress-context",
+                          "versions/2.0.6dev/zh/building-blocks/context/offload-context"
+                        ]
+                      },
+                      {
+                        "group": "工具",
+                        "pages": [
+                          "versions/2.0.6dev/zh/building-blocks/tool/overview",
+                          "versions/2.0.6dev/zh/building-blocks/tool/python-tool",
+                          "versions/2.0.6dev/zh/building-blocks/tool/mcp",
+                          "versions/2.0.6dev/zh/building-blocks/tool/skill",
+                          "versions/2.0.6dev/zh/building-blocks/tool/manage-tools"
+                        ]
+                      },
+                      "versions/2.0.6dev/zh/building-blocks/plan",
+                      {
+                        "group": "权限系统",
+                        "pages": [
+                          "versions/2.0.6dev/zh/building-blocks/permission-system/overview",
+                          "versions/2.0.6dev/zh/building-blocks/permission-system/permission-mode",
+                          "versions/2.0.6dev/zh/building-blocks/permission-system/permission-rule",
+                          "versions/2.0.6dev/zh/building-blocks/permission-system/tool-check"
+                        ]
+                      },
+                      "versions/2.0.6dev/zh/building-blocks/middleware",
+                      "versions/2.0.6dev/zh/building-blocks/rag",
+                      "versions/2.0.6dev/zh/building-blocks/long-term-memory",
+                      {
+                        "group": "工作区",
+                        "pages": [
+                          "versions/2.0.6dev/zh/building-blocks/workspace/overview",
+                          "versions/2.0.6dev/zh/building-blocks/workspace/run-workspace",
+                          "versions/2.0.6dev/zh/building-blocks/workspace/manage-resources",
+                          "versions/2.0.6dev/zh/building-blocks/workspace/mcp-gateway"
+                        ]
+                      }
+                    ]
+                  },
+                  {
+                    "group": "智能体即服务",
+                    "pages": [
+                      "versions/2.0.6dev/zh/deploy/agent-service",
+                      "versions/2.0.6dev/zh/deploy/agent-team",
+                      "versions/2.0.6dev/zh/deploy/sharing",
+                      "versions/2.0.6dev/zh/deploy/rag",
+                      "versions/2.0.6dev/zh/deploy/workspace-manager",
+                      {
+                        "group": "API",
+                        "openapi": "versions/2.0.6dev/en/deploy/openapi.json"
+                      }
+                    ]
+                  },
+                  {
+                    "group": "其他",
+                    "pages": [
+                      "versions/2.0.6dev/zh/others/faq",
+                      "versions/2.0.6dev/zh/others/change-log"
+                    ]
+                  }
+                ]
+              }
+            ]
+          },
+          {
             "version": "2.0.5",
             "tabs": [
               {
@@ -666,7 +876,7 @@
   "redirects": [
     {
       "source": "/latest/:slug*",
-      "destination": "/versions/2.0.5/:slug*"
+      "destination": "/versions/2.0.6dev/:slug*"
     },
     {
       "source": "/stable/:slug*",
