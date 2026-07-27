@@ -56,8 +56,14 @@ echo "Creating version $NEW_VERSION from $SOURCE_VERSION..."
 cp -r "$SOURCE_DIR" "$TARGET_DIR"
 
 # Replace version references in all mdx files
+# GNU sed (Linux) and BSD sed (macOS) disagree on the -i argument, so branch on it
 echo "Updating internal links in mdx files..."
-find "$TARGET_DIR" -name "*.mdx" -exec sed -i '' "s|/versions/$SOURCE_VERSION/|/versions/$NEW_VERSION/|g" {} \;
+if sed --version >/dev/null 2>&1; then
+    SED_INPLACE=(sed -i)
+else
+    SED_INPLACE=(sed -i '')
+fi
+find "$TARGET_DIR" -name "*.mdx" -exec "${SED_INPLACE[@]}" "s|/versions/$SOURCE_VERSION/|/versions/$NEW_VERSION/|g" {} \;
 
 # Count modified files
 MODIFIED_COUNT=$(grep -r "/versions/$NEW_VERSION/" "$TARGET_DIR" --include="*.mdx" -l 2>/dev/null | wc -l | tr -d ' ')
