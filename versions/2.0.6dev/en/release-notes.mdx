@@ -7,6 +7,131 @@ description: "Version history of AgentScope 2.x, including new features, changes
 For the full commit-level history and contributor list, see the [GitHub releases page](https://github.com/agentscope-ai/agentscope/releases).
 </Tip>
 
+## v2.0.5
+
+*Released on 2026-07-23.*
+
+<Note>
+**Highlight**: This release adds
+	- structured output and runtime state injection in the `Agent` class,
+	- four new workspace backends (OpenSandbox, Daytona, Kubernetes, Bubblewrap),
+	- MongoDB / Elasticsearch vector stores with Word and Excel parsers, and
+	- SQLAlchemy-based storage and cross-user resource sharing in the agent service.
+</Note>
+
+### Added
+
+**Agent Core (SDK)**
+
+- Support structured output via the `structured_schema` argument of `Agent.reply()` and `Agent.reply_stream()`. The agent generates the result through a built-in structured-output tool, and the validated dict is carried on the final message's `structured_output` attribute. ([#2150](https://github.com/agentscope-ai/agentscope/pull/2150))
+- Support runtime state injection: the current time, plan task counts, and context usage are injected into the context as a `HintBlock` before each reasoning step, configured by the new `injection_config` argument and `InjectionConfig` class. ([#2134](https://github.com/agentscope-ai/agentscope/pull/2134))
+
+**Workspace**
+
+- Add `OpenSandboxWorkspace`, `OpenSandboxBackend`, and `OpenSandboxWorkspaceManager` classes, supporting [OpenSandbox](https://github.com/agentscope-ai/opensandbox) as a workspace backend. ([#1953](https://github.com/agentscope-ai/agentscope/pull/1953))
+- Add `DaytonaWorkspace`, `DaytonaBackend`, and `DaytonaWorkspaceManager` classes, supporting [Daytona](https://www.daytona.io) sandboxes. ([#1943](https://github.com/agentscope-ai/agentscope/pull/1943))
+- Add `K8sWorkspace`, `K8sBackend`, and `K8sWorkspaceManager` classes, supporting Kubernetes Pod/PVC lifecycle management, a tar-stream file backend, and the MCP gateway. ([#1933](https://github.com/agentscope-ai/agentscope/pull/1933))
+- Add `BubblewrapWorkspace`, `BubblewrapBackend`, and `BubblewrapWorkspaceManager` classes, supporting lightweight local sandboxing on Linux via bubblewrap. ([#2051](https://github.com/agentscope-ai/agentscope/pull/2051))
+
+**Tool**
+
+- Add the built-in `PowerShell` tool, so agents can execute shell commands in Windows workspaces. ([#2132](https://github.com/agentscope-ai/agentscope/pull/2132))
+
+**RAG**
+
+- Add `MongoDBStore` class, supporting MongoDB Atlas Vector Search as a vector store. ([#2008](https://github.com/agentscope-ai/agentscope/pull/2008))
+- Add `ElasticsearchStore` class, supporting Elasticsearch as a vector store. ([#2129](https://github.com/agentscope-ai/agentscope/pull/2129))
+- Add `WordParser` and `ExcelParser` classes, supporting Word and Excel documents as knowledge sources. ([#2025](https://github.com/agentscope-ai/agentscope/pull/2025), [#2026](https://github.com/agentscope-ai/agentscope/pull/2026))
+
+**Agent Service**
+
+- Add `AsyncSQLAlchemyStorage` class, supporting any SQLAlchemy-compatible database as the storage backend, with Alembic migrations included. ([#2029](https://github.com/agentscope-ai/agentscope/pull/2029))
+- Support sharing credentials, agents, and knowledge bases across users at the group or organization level, backed by a new resource access policy layer. ([#1998](https://github.com/agentscope-ai/agentscope/pull/1998))
+- Surface reply errors to the frontend instead of failing silently. ([#2133](https://github.com/agentscope-ai/agentscope/pull/2133))
+
+**Model**
+
+- Support the Kimi K3 model in the `MoonshotChatModel` class. ([#2141](https://github.com/agentscope-ai/agentscope/pull/2141))
+- Add `qwen3.7-plus`, `deepseek-v4-pro`, and `glm-5.2` model cards for the `DashScopeChatModel` class. ([#2073](https://github.com/agentscope-ai/agentscope/pull/2073))
+
+**TTS**
+
+- Add `GeminiTTSModel` class, supporting the Gemini TTS API. ([#1879](https://github.com/agentscope-ai/agentscope/pull/1879))
+
+**WebUI**
+
+- Add a scroll-to-bottom button to the chat page. ([#2106](https://github.com/agentscope-ai/agentscope/pull/2106))
+
+### Changed
+
+**Prompt**
+
+- Refine the built-in instructions for the workspace, context compression, and the `TaskCreate` tool. The workspace prompt assembly is extracted into shared helpers so every workspace backend produces a consistent description. ([#2111](https://github.com/agentscope-ai/agentscope/pull/2111))
+
+**WebUI**
+
+- Refactor the text input component. ([#2102](https://github.com/agentscope-ai/agentscope/pull/2102))
+- Refactor tool call rendering. ([#2072](https://github.com/agentscope-ai/agentscope/pull/2072))
+
+**Dependencies**
+
+- Reorganize the optional dependency groups in `pyproject.toml`, so each feature (RAG backends, workspaces, TTS, long-term memory) can be installed on its own. ([#2157](https://github.com/agentscope-ai/agentscope/pull/2157))
+- Restrict the `mcp` dependency to versions below 2.0.0. ([#2091](https://github.com/agentscope-ai/agentscope/pull/2091))
+
+### Fixed
+
+**Agent**
+
+- Continue the reasoning-acting loop when the model returns a thinking-only response, instead of ending the reply. ([#2120](https://github.com/agentscope-ai/agentscope/pull/2120))
+- Preserve paired tool calls and tool results during context compression when a single reasoning step issues multiple tool calls. ([#2093](https://github.com/agentscope-ai/agentscope/pull/2093))
+
+**Permission**
+
+- Unify the per-mode evaluation logic in the permission engine, and propagate batch confirmation exemptions to the subsequent tool calls. ([#2117](https://github.com/agentscope-ai/agentscope/pull/2117))
+
+**Model**
+
+- The OpenAI chat model sends `max_completion_tokens` instead of the deprecated `max_tokens`. ([#2065](https://github.com/agentscope-ai/agentscope/pull/2065))
+- Preserve the reasoning history when replaying a conversation through the OpenAI Responses API. ([#2071](https://github.com/agentscope-ai/agentscope/pull/2071))
+
+**Formatter**
+
+- Preserve `redacted_thinking` blocks in the Anthropic message round-trip. ([#2139](https://github.com/agentscope-ai/agentscope/pull/2139))
+- Drop empty text blocks for Anthropic, which rejects them. ([#2007](https://github.com/agentscope-ai/agentscope/pull/2007))
+- Include `tool_name` in Ollama tool result messages. ([#2006](https://github.com/agentscope-ai/agentscope/pull/2006))
+- Strip `null` types from Gemini tool schemas. ([#2020](https://github.com/agentscope-ai/agentscope/pull/2020))
+
+**Tool**
+
+- Built-in `Bash` no longer classifies mutating `find` commands (e.g. `-delete`, `-exec`) as read-only. ([#2004](https://github.com/agentscope-ai/agentscope/pull/2004))
+
+**Skill**
+
+- Expand user-home (`~`) paths when loading skill directories. ([#2053](https://github.com/agentscope-ai/agentscope/pull/2053))
+
+**Workspace**
+
+- Fix the OpenSandbox bootstrap process and its state filtering. ([#2046](https://github.com/agentscope-ai/agentscope/pull/2046))
+- Restore the default path of the glob helper. ([#2056](https://github.com/agentscope-ai/agentscope/pull/2056))
+
+**RAG**
+
+- Adapt `MilvusLiteStore` to the COSINE distance semantics of milvus-lite 3.1.0. ([#2089](https://github.com/agentscope-ai/agentscope/pull/2089))
+
+**Agent Service**
+
+- Use cursor-based pagination in `list_messages`, so concurrent writes no longer shift the page boundaries. ([#2081](https://github.com/agentscope-ai/agentscope/pull/2081))
+
+**WebUI**
+
+- Fix rendering errors in the `Read` / `Write` / `Edit` tool calls caused by incomplete JSON during streaming or interruption. ([#2075](https://github.com/agentscope-ai/agentscope/pull/2075))
+- Scroll newly loaded sessions to the bottom. ([#2100](https://github.com/agentscope-ai/agentscope/pull/2100))
+
+**Docs**
+
+- Fix docstring formatting errors in the `tool` module. ([#2127](https://github.com/agentscope-ai/agentscope/pull/2127))
+- Use a separate LLM instance in the mem0 example. ([#2078](https://github.com/agentscope-ai/agentscope/pull/2078))
+
 ## v2.0.4
 
 *Released on 2026-07-07.*
