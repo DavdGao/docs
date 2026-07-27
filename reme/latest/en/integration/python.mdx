@@ -78,4 +78,4 @@ ReMe provides the memory result. The host application still decides when to reca
 
 When you build an AgentScope agent, use its first-party `ReMeMiddleware` instead of constructing `ReMe` directly. The middleware embeds ReMe in the AgentScope process and can reuse AgentScope chat and embedding models. It writes conversations through `auto_memory` and supports automatic retrieval and the `memory_search` tool.
 
-Install the integration with `pip install "agentscope[reme]"`. AgentScope does not close middleware automatically, so call `await memory.close()` during application shutdown. Read the [AgentScope long-term memory guide](/versions/2.0.5dev/en/building-blocks/long-term-memory#reme) for the complete example, control modes, and session behavior.
+Install the integration with `pip install "agentscope[reme]"`. AgentScope does not close middleware automatically, so call `await memory.close()` during application shutdown. Read the [AgentScope long-term memory guide](/versions/2.0.6dev/en/building-blocks/long-term-memory#reme) for the complete example, control modes, and session behavior.

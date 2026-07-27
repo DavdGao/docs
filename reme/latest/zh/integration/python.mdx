@@ -78,4 +78,4 @@ ReMe 负责返回记忆，宿主应用仍需决定何时召回、什么内容值
 
 使用 AgentScope 构建 Agent 时，应使用第一方 `ReMeMiddleware`，而不是直接构造 `ReMe`。该中间件在 AgentScope 进程内嵌入 ReMe，并可以复用 AgentScope 的 chat 与 embedding model。它通过 `auto_memory` 自动写回对话，同时支持自动检索和 `memory_search` 工具。
 
-使用 `pip install "agentscope[reme]"` 安装可选依赖。AgentScope 不会自动关闭 middleware，因此应用退出时仍需调用 `await memory.close()`。完整示例、控制模式和会话行为见 [AgentScope 长期记忆指南](/versions/2.0.5dev/zh/building-blocks/long-term-memory#reme)。
+使用 `pip install "agentscope[reme]"` 安装可选依赖。AgentScope 不会自动关闭 middleware，因此应用退出时仍需调用 `await memory.close()`。完整示例、控制模式和会话行为见 [AgentScope 长期记忆指南](/versions/2.0.6dev/zh/building-blocks/long-term-memory#reme)。
