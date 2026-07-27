@@ -18,22 +18,22 @@ fi
 
 SCRIPT_DIR="$(cd "$(dirname "$0")" && pwd)"
 DOCS_ROOT="$(dirname "$SCRIPT_DIR")"
-AGENTSCOPE_DIR="$DOCS_ROOT/agentscope"
+VERSIONS_DIR="$DOCS_ROOT/versions"
 DOCS_JSON="$DOCS_ROOT/docs.json"
 
 # If source version not specified, find the latest version
 if [ -z "$SOURCE_VERSION" ]; then
     # Get all version directories, sort by version number (descending), take the first
-    SOURCE_VERSION=$(ls -1 "$AGENTSCOPE_DIR" | sort -V -r | head -1)
+    SOURCE_VERSION=$(ls -1 "$VERSIONS_DIR" | sort -V -r | head -1)
     
     if [ -z "$SOURCE_VERSION" ]; then
-        echo "Error: No existing versions found in $AGENTSCOPE_DIR"
+        echo "Error: No existing versions found in $VERSIONS_DIR"
         exit 1
     fi
 fi
 
-SOURCE_DIR="$AGENTSCOPE_DIR/$SOURCE_VERSION"
-TARGET_DIR="$AGENTSCOPE_DIR/$NEW_VERSION"
+SOURCE_DIR="$VERSIONS_DIR/$SOURCE_VERSION"
+TARGET_DIR="$VERSIONS_DIR/$NEW_VERSION"
 
 if [ ! -d "$SOURCE_DIR" ]; then
     echo "Error: Source version directory not found: $SOURCE_DIR"
@@ -57,10 +57,10 @@ cp -r "$SOURCE_DIR" "$TARGET_DIR"
 
 # Replace version references in all mdx files
 echo "Updating internal links in mdx files..."
-find "$TARGET_DIR" -name "*.mdx" -exec sed -i '' "s|/agentscope/$SOURCE_VERSION/|/agentscope/$NEW_VERSION/|g" {} \;
+find "$TARGET_DIR" -name "*.mdx" -exec sed -i '' "s|/versions/$SOURCE_VERSION/|/versions/$NEW_VERSION/|g" {} \;
 
 # Count modified files
-MODIFIED_COUNT=$(grep -r "/agentscope/$NEW_VERSION/" "$TARGET_DIR" --include="*.mdx" -l 2>/dev/null | wc -l | tr -d ' ')
+MODIFIED_COUNT=$(grep -r "/versions/$NEW_VERSION/" "$TARGET_DIR" --include="*.mdx" -l 2>/dev/null | wc -l | tr -d ' ')
 
 # Update docs.json: clone navigation entry per language + update redirects
 echo "Updating docs.json (navigation + redirects)..."
@@ -78,9 +78,9 @@ with open(docs_json_path, "r", encoding="utf-8") as f:
 
 
 def update_paths(obj):
-    """Recursively rewrite any 'agentscope/<SOURCE_VERSION>/' substring."""
-    src = f"agentscope/{source_version}/"
-    dst = f"agentscope/{new_version}/"
+    """Recursively rewrite any 'versions/<SOURCE_VERSION>/' substring."""
+    src = f"versions/{source_version}/"
+    dst = f"versions/{new_version}/"
     if isinstance(obj, str):
         return obj.replace(src, dst)
     if isinstance(obj, list):
@@ -95,15 +95,7 @@ skipped = []
 languages = data.get("navigation", {}).get("languages", []) or []
 for lang_entry in languages:
     lang = lang_entry.get("language", "?")
-    project_tab = next(
-        (tab for tab in lang_entry.get("tabs", []) if tab.get("tab") == "AgentScope"),
-        None,
-    )
-    if project_tab is None:
-        skipped.append(f"{lang}(AgentScope tab not found)")
-        continue
-
-    versions = project_tab.get("versions", []) or []
+    versions = lang_entry.get("versions", []) or []
 
     # Skip if the new version already exists for this language
     if any(v.get("version") == new_version for v in versions):
@@ -126,7 +118,7 @@ for lang_entry in languages:
 
     # Insert right BEFORE the source version so newer versions appear higher
     versions.insert(source_idx, new_entry)
-    project_tab["versions"] = versions
+    lang_entry["versions"] = versions
     added.append(lang)
 
 # Update redirects (/latest/ for dev, /stable/ for release)
@@ -135,8 +127,8 @@ target_source = "/latest/:slug*" if is_dev else "/stable/:slug*"
 redirect_updated = ""
 for redirect in data.get("redirects", []) or []:
     if redirect.get("source") == target_source:
-        redirect["destination"] = f"/agentscope/{new_version}/:slug*"
-        redirect_updated = f"{target_source} -> /agentscope/{new_version}/:slug*"
+        redirect["destination"] = f"/versions/{new_version}/:slug*"
+        redirect_updated = f"{target_source} -> /versions/{new_version}/:slug*"
         break
 
 with open(docs_json_path, "w", encoding="utf-8") as f:

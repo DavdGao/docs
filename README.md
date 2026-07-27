@@ -64,7 +64,7 @@ The preview is available at `http://localhost:3000` by default.
 
 ```text
 .
-├── agentscope/
+├── versions/
 │   └── <version>/{en,zh}/   # Versioned AgentScope documentation
 ├── reme/
 │   └── latest/{en,zh}/      # Current ReMe documentation
