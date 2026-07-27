@@ -50,9 +50,13 @@ description: 提交代码前的检查约定
 
 ## 配置
 
-ReMe 从内置 `default` 配置开始，再合并配置文件和命令行点号覆盖：
+未传入 `config=` 时，ReMe 会加载内置 `default` 配置。通过 `config=` 指定的文件会替代内置默认配置，因此必须包含完整的应用配置。命令行点号参数会继续覆盖最终选中的配置：
 
 ```bash
+# 使用内置默认配置，仅覆盖端口
+reme start service.port=8181
+
+# 使用完整的自定义配置，再覆盖其中的端口
 reme start config=/path/to/config.yaml service.port=8181
 ```
 

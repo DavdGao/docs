@@ -50,9 +50,13 @@ Run pytest before submitting. Context: [[daily/2026-07-13/session-42.md]].
 
 ## Configuration
 
-ReMe starts with the built-in `default` configuration, then merges a config file and dot-notation overrides:
+Without `config=`, ReMe loads the built-in `default` configuration. A file passed through `config=` replaces that default and must contain a complete application configuration. Dot-notation arguments are then merged on top of whichever configuration was selected:
 
 ```bash
+# Use the built-in default with a small override
+reme start service.port=8181
+
+# Use a complete custom configuration, then override its port
 reme start config=/path/to/config.yaml service.port=8181
 ```
 
