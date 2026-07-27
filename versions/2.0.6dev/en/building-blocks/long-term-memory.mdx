@@ -12,6 +12,7 @@ AgentScope currently supports the following long-term memory implementations, wi
 | Name | Code API | Description |
 |------|----------|-------------|
 | Agentic Memory | `AgenticMemoryMiddleware` | Markdown-file-based long-term memory that agents create, maintain, and use autonomously. |
+| ReMe | `ReMeMiddleware` | An in-process, file-based long-term memory powered by [ReMe](https://github.com/agentscope-ai/ReMe), which automatically extracts and writes back memories from conversations. |
 | Mem0 | `Mem0Middleware` | A drop-in long-term memory backend powered by [mem0](https://github.com/mem0ai/mem0). |
 | More coming ... | | |
 
@@ -206,6 +207,102 @@ finally:
 
 </CodeGroup>
 
+## ReMe
+
+[ReMe](https://github.com/agentscope-ai/ReMe) is a file-based memory toolkit maintained by the AgentScope team. `ReMeMiddleware` embeds ReMe in the current process, so no separate service is required. It listens to the agent's conversations and automatically extracts and writes back memories through ReMe's `auto_memory` job after each reply. The agent does not save memories itself, and ReMe does not provide a manual memory-add tool.
+
+<Tip>
+The ReMe workspace is specified by `workspace_dir` and stores memory cards and search indexes. Reusing the same workspace across sessions enables cross-session recall.
+</Tip>
+
+### Installation
+
+`ReMeMiddleware`'s dependencies are available as an optional AgentScope extra:
+
+```bash
+pip install "agentscope[reme]"
+```
+
+### Quick start
+
+You can inject AgentScope chat and embedding models into ReMe. The chat model drives `auto_memory` extraction; providing an embedding model automatically enables vector search with the default configuration. Replace `my_chat_model` and `my_embedding_model` below with your model instances:
+
+```python
+import asyncio
+
+from agentscope.agent import Agent
+from agentscope.middleware import ReMeMiddleware
+from agentscope.state import AgentState
+from agentscope.tool import Toolkit
+
+
+async def main():
+    memory = ReMeMiddleware(
+        workspace_dir=".reme",
+        parameters=ReMeMiddleware.Parameters(
+            chat_model=my_chat_model,
+            embedding_model=my_embedding_model,
+            mode="both",
+            top_k=5,
+        ),
+    )
+
+    agent = Agent(
+        name="assistant",
+        system_prompt="You are a helpful assistant.",
+        model=my_chat_model,
+        # In both / agent_control modes, add memory_search to the toolkit.
+        toolkit=Toolkit(tools=await memory.list_tools()),
+        middlewares=[memory],
+        # Set a stable ID for a resumable session; AgentState generates one
+        # automatically when no ID is provided.
+        state=AgentState(session_id="alice-main"),
+    )
+
+    try:
+        await agent.reply("Remember that I live in Hangzhou and prefer concise Chinese answers.")
+    finally:
+        # AgentScope does not manage middleware lifecycles automatically.
+        await memory.close()
+
+
+asyncio.run(main())
+```
+
+Without injected models, ReMe creates its LLM and embedding backends from its own configuration and credentials. The default `default` configuration uses BM25 keyword search for its file store. For semantic search, pass an `embedding_model`. Its vector dimensions must match the vector store configured for ReMe; the example uses a 1024-dimensional DashScope embedding model.
+
+### Control modes
+
+`ReMeMiddleware.Parameters.mode` defaults to `"both"` and controls retrieval only; conversation write-back runs automatically in all three modes.
+
+| Mode | Behavior |
+|------|----------|
+| `static_control` | The middleware starts a background search when `reply` begins and injects the results as an `AssistantMsg(name="memory")` hint before a later reasoning step; the agent is unaware of the retrieval. Because search runs concurrently with the reply, a single-model-call reply may finish before the hint can be injected. |
+| `agent_control` | No automatic retrieval. The middleware exposes a `memory_search(query, limit)` tool through `list_tools()` and appends a short usage nudge to the system prompt; the agent decides when to search. The conversation is still written back automatically after the reply. |
+| `both` | Enables both automatic retrieval and the `memory_search` tool. |
+
+In `static_control` mode, `await memory.list_tools()` returns an empty list. In `agent_control` and `both` modes, pass the returned tools into `Toolkit` as shown above. `memory_search` is query-only; there is no `add_memory` tool because writes are always handled automatically by the middleware.
+
+### Session scope and lifecycle
+
+- Write-back is scoped by `agent.state.session_id`. Set a stable ID with `AgentState(session_id="...")` for a resumable session; the ID does not belong on the middleware configuration.
+- Search spans the entire `workspace_dir`, rather than only the current `session_id`. A new agent using the same workspace can therefore recall memories written by an earlier session.
+- One `ReMeMiddleware` can safely be shared across multiple agents and sessions. The middleware reads each agent's `session_id` at hook time. Call `await memory.close()` explicitly when the application shuts down.
+
+After `auto_memory` writes a card, ReMe still needs to index it before it becomes searchable. A search issued immediately after write-back may temporarily miss the new card. The [`examples/long_term_memory/reme`](https://github.com/agentscope-ai/agentscope/tree/main/examples/long_term_memory/reme) example explicitly triggers indexing after write-back so its demonstration is deterministic.
+
+### Key parameters
+
+| Location | Parameter | Default | Description |
+|----------|-----------|---------|-------------|
+| `ReMeMiddleware(...)` | `workspace_dir` | `".reme"` | Directory for ReMe memory cards and indexes. |
+| `ReMeMiddleware(...)` | `config` | `"default"` | ReMe configuration name or configuration file path. |
+| `Parameters` | `chat_model` | `None` | LLM injected into ReMe for `auto_memory`; when omitted, ReMe uses its own configured credentials. |
+| `Parameters` | `embedding_model` | `None` | Embedding model injected into ReMe and enables the vector store; when omitted, ReMe uses its own embedding backend and the default configuration remains BM25-based. |
+| `Parameters` | `mode` | `"both"` | `static_control`, `agent_control`, or `both`. |
+| `Parameters` | `top_k` | `5` | Maximum memories returned by each automatic search and the default `limit` for `memory_search`. |
+
+
 ## Mem0
 
 `Mem0Middleware` is a drop-in long-term memory backend powered by [mem0](https://github.com/mem0ai/mem0). It works with both `mem0.AsyncMemory` (open-source) and `mem0.AsyncMemoryClient` (hosted Platform). With `mem0.AsyncMemory` (open-source), it can route mem0's own memory extraction and embedding through your existing AgentScope models — so mem0 needs no separate provider key.
@@ -220,62 +317,35 @@ pip install "agentscope[mem0]"
 
 ### Quick start
 
-The fastest path is to pass a dedicated AgentScope chat model and an embedding model to the middleware; it builds an open-source mem0 store internally and wires both extraction and embedding through them.
+The fastest path is to pass your AgentScope chat and embedding models; the middleware builds an open-source mem0 store internally and wires both extraction and embedding through them.
 
 ```python
 import asyncio
-import os
 
 from agentscope.agent import Agent
-from agentscope.credential import DashScopeCredential
-from agentscope.embedding import DashScopeEmbeddingModel
-from agentscope.message import UserMsg
 from agentscope.middleware import Mem0Middleware
-from agentscope.model import DashScopeChatModel
 from agentscope.tool import Toolkit
 
 
 async def main():
-    api_key = os.environ["DASHSCOPE_API_KEY"]
-
-    # Construct these as two separate chat-model objects, even though they
-    # use the same provider, model name, endpoint, and API key.
-    agent_chat_model = DashScopeChatModel(
-        credential=DashScopeCredential(api_key=api_key),
-        model="qwen3.7-max",
-        stream=False,
-    )
-    mem0_chat_model = DashScopeChatModel(
-        credential=DashScopeCredential(api_key=api_key),
-        model="qwen3.7-max",
-        stream=False,
-    )
-    embedding_model = DashScopeEmbeddingModel(
-        credential=DashScopeCredential(api_key=api_key),
-        model="text-embedding-v4",
-        dimensions=1536,
-    )
-
     mw = Mem0Middleware(
         user_id="alice",
-        chat_model=mem0_chat_model,
-        embedding_model=embedding_model,
+        chat_model=my_chat_model,
+        embedding_model=my_embedding_model,
         mode="both",
     )
 
     agent = Agent(
         name="assistant",
         system_prompt="You are a helpful assistant.",
-        model=agent_chat_model,
+        model=my_chat_model,
         toolkit=Toolkit(tools=await mw.list_tools()),
         middlewares=[mw],
     )
 
     # Memories written in this session resurface in later sessions
     # for the same ``user_id``.
-    await agent.reply(
-        UserMsg("alice", "Remember that I prefer dark-mode charts."),
-    )
+    await agent(...)
 
 
 asyncio.run(main())
@@ -299,16 +369,6 @@ The `mode` parameter decides how the agent interacts with mem0. It defaults to `
 
 `Mem0Middleware` supports three ways to wire up the mem0 backend:
 
-<Warning>
-**When you use an AgentScope chat model to construct the mem0 backend, `Agent` and `Mem0Middleware` must use separate model instances.** This requirement applies to both model-backed paths below: passing AgentScope models directly, and providing `chat_model` with a custom mem0 config. It does not apply to the pre-built client path, where `Mem0Middleware` uses the supplied mem0 client directly.
-
-The instances must be separate because AgentScope chat models use an asynchronous interface, while mem0 invokes a synchronous LLM interface during memory extraction. To bridge these interfaces, `Mem0Middleware` wraps the AgentScope model in an adapter: `Agent` invokes its model on the application's event loop, whereas the adapter runs the memory-extraction model coroutine on a dedicated bridge event loop.
-
-If the two paths share one model instance, they also share its async HTTP client and connection pool across two event loops. The pool's underlying resources may become bound to the loop where they are first used; accessing them from the other loop can then cause intermittent `Connection error` failures or `RuntimeError: ... is bound to a different event loop`. Because the failure can occur only during memory extraction, the Agent may still return a normal response even though the memory write fails or produces no new facts.
-
-The two instances may still use the same provider, model name, endpoint, and API key—the requirement is only that they are separate model/client objects. In multi-agent applications, do not share one mem0 chat-model instance across independently constructed model-backed `Mem0Middleware` instances, because each adapter may own a different bridge event loop.
-</Warning>
-
 <Tabs>
   <Tab title="AgentScope models">
   Pass AgentScope models and let the middleware build an open-source `AsyncMemory` internally (mem0's default Qdrant store). The embedding model's `dimensions` must match the vector store (the default Qdrant expects `1536`).
@@ -316,7 +376,7 @@ The two instances may still use the same provider, model name, endpoint, and API
 ```python
 Mem0Middleware(
     user_id="alice",
-    chat_model=mem0_chat_model,
+    chat_model=my_chat_model,
     embedding_model=my_embedding_model,
 )
 ```
@@ -327,7 +387,7 @@ Mem0Middleware(
 ```python
 Mem0Middleware(
     user_id="alice",
-    chat_model=mem0_chat_model,
+    chat_model=my_chat_model,
     embedding_model=my_embedding_model,
     mem0_config=my_mem0_config,
 )

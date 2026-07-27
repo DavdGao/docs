@@ -1,0 +1,33 @@
+---
+title: "概览"
+description: "选择应用或 Agent 运行和使用 ReMe 的方式。"
+---
+
+所有使用方式都面向同一个 ReMe workspace 和 job。主要需要决定：由谁管理 ReMe 的生命周期，以及宿主需要共享服务、使用服务的 Agent 接入，还是进程内 Python 调用。
+
+## 选择接入方式
+
+选择与宿主能力最匹配的接入边界：
+
+| 方式 | 适用场景 | 职责 |
+|---|---|---|
+| [服务接口](/reme/latest/zh/integration/services) | ReMe 需要独立运行并服务一个或多个 client | 提供 MCP、CLI 或 HTTP 访问方式 |
+| [Python](/reme/latest/zh/integration/python) | Python 或 AgentScope 应用需要进程内使用 ReMe | 调用 `ReMe.run_job()` 或使用 `ReMeMiddleware` |
+| [Agent 接入](/reme/latest/zh/integration/agents) | Agent 需要连接已部署的 ReMe 服务 | 在服务之上应用工具、plugin 或 Skill |
+
+AgentScope 的第一方 `ReMeMiddleware`，以及其他需要在进程内管理 ReMe 的 Python 宿主，应选择 [Python](/reme/latest/zh/integration/python)。需要连接共享服务的 Agent 应选择 [Agent 接入](/reme/latest/zh/integration/agents)；选择 MCP、CLI 或 HTTP 时查看[服务接口](/reme/latest/zh/integration/services)。
+
+## 运行模型
+
+直接使用 Python 或 AgentScope 时，ReMe 嵌入宿主进程；MCP、CLI 和 HTTP 访问独立运行的 ReMe 服务；Skill 位于服务接口之上，负责告诉 Agent 何时使用它们。
+
+```text
+Python 宿主 ── ReMe.run_job() ─┐
+AgentScope ── ReMeMiddleware ──┴──> ReMe Application ──> workspace
+
+Agent / 应用 ── MCP / CLI / HTTP ──> ReMe 服务 ──> workspace
+                    ↑
+                 Skill 规则
+```
+
+一个 workspace 只保留一个运行时所有者：由 Python 宿主管理应用生命周期，或者通过 `reme start` 启动一个共享服务。运行时负责后台索引和定时整合；宿主仍需负责会话 hook、稳定的 session ID，以及何时召回或记录记忆。

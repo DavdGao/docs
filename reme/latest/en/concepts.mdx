@@ -1,0 +1,54 @@
+---
+title: "Concepts"
+description: "The principles and trade-offs behind ReMe's file-native agent memory."
+---
+
+ReMe is not defined by one retrieval algorithm or pipeline. It starts from a set of judgments about long-term agent memory: users should own it, it should grow from experience, and people and agents should be able to understand and correct it together.
+
+## Memory as File
+
+Long-term memory should not exist only as internal database rows or temporary prompt text. ReMe stores memory as local files that users can read, search, edit, move, delete, back up, and version with ordinary tools.
+
+Files do not exclude indexes. ReMe can build keyword, embedding, and link indexes over Markdown, but those indexes are rebuildable derived state. User-owned files remain the source of truth.
+
+This makes memory:
+
+- **transparent**: users can see what the agent remembers;
+- **controllable**: incorrect, stale, or sensitive memory can be corrected or removed;
+- **portable**: memory is not locked to one database, model, or agent framework.
+
+## Memory from Experience
+
+Saving every message is not the same as remembering. Raw conversations are valuable evidence but poor durable understanding; endlessly appended summaries become repetitive, contradictory, and stale.
+
+ReMe separates sources, daily notes, and durable memory. It preserves what happened, then refines facts, preferences, procedures, and knowledge worth reusing. New experience can extend, merge, or correct older understanding.
+
+A memory system therefore needs refinement and forgetting as well as writing. Its value comes from helping future action, not from the number of files or tokens stored.
+
+## Human-Agent Shared Memory
+
+Markdown is the shared surface between people and agents. Agents can refine, link, and recall automatically; users can always inspect and make the final correction.
+
+That collaboration requires boundaries:
+
+- do not store sensitive information merely because it might be useful;
+- preserve relevant sources and context when changing a conclusion;
+- do not treat retrieval output as unquestionable truth;
+- let the host agent decide when and how to act on memory.
+
+## Connected and Traceable
+
+Isolated fragments rarely explain how a decision formed. Links express both source and related context, allowing an agent to expand a useful hit and a user to verify durable conclusions against original material.
+
+Traceability does not mean retaining everything. It means keeping enough evidence for important understanding, and allowing memories to change when sources disappear, judgments evolve, or a user asks to forget.
+
+## Trade-offs
+
+ReMe deliberately favors:
+
+- file transparency over fully opaque automation;
+- user control over unbounded collection;
+- correctable understanding over lossless retention of all context;
+- open integration contracts over commitment to one agent framework.
+
+Auto Memory, Auto Resource, Auto Dream, BM25, embeddings, and wikilinks are current implementation choices—not the philosophy itself. Read `reme/`, `reme/config/default.yaml`, and `tests/` for the current mechanics.

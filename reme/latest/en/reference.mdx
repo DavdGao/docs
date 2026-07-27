@@ -1,0 +1,123 @@
+---
+title: "Reference"
+description: "Stable workspace, configuration, CLI, HTTP, and MCP contracts for ReMe."
+---
+
+This page records stable user-facing semantics and points to authoritative interfaces for the installed version. Exact parameters belong to runtime schemas and source code.
+
+## Workspace
+
+The default workspace is `.reme/` under the launch directory. Override it at startup:
+
+```bash
+reme start workspace_dir=/path/to/workspace
+```
+
+The workspace uses the following top-level directories:
+
+| Directory | Meaning | User editing |
+|---|---|---|
+| `session/` | Raw conversations and agent sessions | Usually read-only |
+| `resource/` | Imported source material | Add, replace, or delete as needed |
+| `daily/` | Date-based notes and lightly refined output | Inspect and correct |
+| `digest/` | Durable personal facts, procedures, and knowledge | Primary manual editing surface |
+| `metadata/` | Derived indexes, graph, and catalogs | Do not edit manually |
+
+<Note>
+`metadata/` can be rebuilt and must not be the only copy of memory. Backups should retain at least `session/`, `resource/`, `daily/`, and `digest/`.
+</Note>
+
+## Markdown Memory
+
+Memory files are ordinary Markdown with optional YAML frontmatter:
+
+```markdown
+---
+name: Build checks
+description: Checks required before submitting code
+---
+
+# Build checks
+
+Run pytest before submitting. Context: [[daily/2026-07-13/session-42.md]].
+```
+
+- Paths are workspace-relative and file actions cannot escape the workspace.
+- ReMe can add a missing `.md` suffix where appropriate.
+- `[[path/to/file.md]]` is a workspace wikilink.
+- `name` and `description` are common summary fields. Treat other metadata as stable only when covered by the current schema.
+- Prefer ReMe `move` / `delete` actions for linked files so related links can be checked.
+
+## Configuration
+
+Without `config=`, ReMe loads the built-in `default` configuration. A file passed through `config=` replaces that default and must contain a complete application configuration. Dot-notation arguments are then merged on top of whichever configuration was selected:
+
+```bash
+# Use the built-in default with a small override
+reme start service.port=8181
+
+# Use a complete custom configuration, then override its port
+reme start config=/path/to/config.yaml service.port=8181
+```
+
+Common top-level groups include:
+
+| Setting | Meaning |
+|---|---|
+| `workspace_dir` | Workspace root |
+| `timezone` | Timezone for daily notes and scheduled jobs |
+| `service.backend` | `http` or `mcp` |
+| `service.host` / `service.port` | Listen address |
+| `service.transport` | MCP transport |
+| `jobs` | Background, scheduled, and served actions |
+| `components` | LLM, embedding, storage, and graph implementations |
+
+`${VAR}` and `${VAR:-default}` in string values expand from the environment. Never commit configuration or `.env` files containing secrets.
+
+Authoritative sources:
+
+- [`reme/config/default.yaml`](https://github.com/agentscope-ai/ReMe/blob/main/reme/config/default.yaml) for default jobs, components, and parameters;
+- [`reme/schema/application_config.py`](https://github.com/agentscope-ai/ReMe/blob/main/reme/schema/application_config.py) for the top-level model;
+- [`reme/config/config_parser.py`](https://github.com/agentscope-ai/ReMe/blob/main/reme/config/config_parser.py) for merge, override, and environment rules.
+
+## CLI
+
+The CLI has one uniform form:
+
+```text
+reme <action> key=value nested.key=value
+```
+
+Common entrypoints:
+
+```bash
+reme help          # actions served by the current service
+reme version       # installed version
+reme health_check  # component status
+reme find_reme     # locate a running ReMe process
+reme reindex       # clear and rebuild the file index
+```
+
+Actions other than `start` connect to the running service. Runtime `reme help` and `reme/config/default.yaml` are the authoritative action and parameter lists.
+
+## HTTP and MCP
+
+The default HTTP service exposes served jobs as `POST /{action}`. While it is running, use:
+
+- `/docs` for interactive OpenAPI documentation;
+- `/openapi.json` for the machine-readable schema.
+
+Start MCP with:
+
+```bash
+reme start service.backend=mcp service.transport=streamable-http
+```
+
+The default MCP URL is `http://127.0.0.1:2333/mcp`. MCP clients discover the current tool list on connection.
+
+## Compatibility and Changes
+
+- Python and dependency ranges: [`pyproject.toml`](https://github.com/agentscope-ai/ReMe/blob/main/pyproject.toml)
+- Request, response, and persistent structures: [`reme/schema/`](https://github.com/agentscope-ai/ReMe/tree/main/reme/schema)
+- Behavioral boundaries: [`tests/`](https://github.com/agentscope-ai/ReMe/tree/main/tests)
+- Version changes: [GitHub Releases](https://github.com/agentscope-ai/ReMe/releases)

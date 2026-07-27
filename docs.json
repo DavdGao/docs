@@ -13,12 +13,12 @@
       {
         "language": "en",
         "default": true,
-        "versions": [
+        "tabs": [
           {
-            "version": "2.0.6dev",
-            "tabs": [
+            "tab": "AgentScope",
+            "versions": [
               {
-                "tab": "Guides",
+                "version": "2.0.6dev",
                 "groups": [
                   {
                     "group": "Get Started",
@@ -116,14 +116,9 @@
                     ]
                   }
                 ]
-              }
-            ]
-          },
-          {
-            "version": "2.0.5",
-            "tabs": [
+              },
               {
-                "tab": "Guides",
+                "version": "2.0.5",
                 "groups": [
                   {
                     "group": "Get Started",
@@ -221,14 +216,9 @@
                     ]
                   }
                 ]
-              }
-            ]
-          },
-          {
-            "version": "2.0.4",
-            "tabs": [
+              },
               {
-                "tab": "Guides",
+                "version": "2.0.4",
                 "groups": [
                   {
                     "group": "Get Started",
@@ -274,14 +264,9 @@
                     ]
                   }
                 ]
-              }
-            ]
-          },
-          {
-            "version": "2.0.3",
-            "tabs": [
+              },
               {
-                "tab": "Guides",
+                "version": "2.0.3",
                 "groups": [
                   {
                     "group": "Get Started",
@@ -327,14 +312,9 @@
                     ]
                   }
                 ]
-              }
-            ]
-          },
-          {
-            "version": "2.0.2",
-            "tabs": [
+              },
               {
-                "tab": "Guides",
+                "version": "2.0.2",
                 "groups": [
                   {
                     "group": "Get Started",
@@ -375,14 +355,9 @@
                     ]
                   }
                 ]
-              }
-            ]
-          },
-          {
-            "version": "1.0.21",
-            "tabs": [
+              },
               {
-                "tab": "Guides",
+                "version": "1.0.21",
                 "groups": [
                   {
                     "group": "Get Started",
@@ -468,17 +443,52 @@
                 ]
               }
             ]
+          },
+          {
+            "tab": "ReMe",
+            "versions": [
+              {
+                "version": "latest",
+                "groups": [
+                  {
+                    "group": "Get Started",
+                    "pages": [
+                      "reme/latest/en/overview",
+                      "reme/latest/en/quickstart",
+                      "reme/latest/en/concepts"
+                    ]
+                  },
+                  {
+                    "group": "Usage",
+                    "pages": [
+                      "reme/latest/en/integration/overview",
+                      "reme/latest/en/integration/services",
+                      "reme/latest/en/integration/python",
+                      "reme/latest/en/integration/agents"
+                    ]
+                  },
+                  {
+                    "group": "Resources",
+                    "pages": [
+                      "reme/latest/en/reference",
+                      "reme/latest/en/faq",
+                      "reme/latest/en/contribution"
+                    ]
+                  }
+                ]
+              }
+            ]
           }
         ]
       },
       {
         "language": "zh",
-        "versions": [
+        "tabs": [
           {
-            "version": "2.0.6dev",
-            "tabs": [
+            "tab": "AgentScope",
+            "versions": [
               {
-                "tab": "指南",
+                "version": "2.0.6dev",
                 "groups": [
                   {
                     "group": "快速开始",
@@ -576,14 +586,9 @@
                     ]
                   }
                 ]
-              }
-            ]
-          },
-          {
-            "version": "2.0.5",
-            "tabs": [
+              },
               {
-                "tab": "指南",
+                "version": "2.0.5",
                 "groups": [
                   {
                     "group": "快速开始",
@@ -681,14 +686,9 @@
                     ]
                   }
                 ]
-              }
-            ]
-          },
-          {
-            "version": "2.0.4",
-            "tabs": [
+              },
               {
-                "tab": "指南",
+                "version": "2.0.4",
                 "groups": [
                   {
                     "group": "快速开始",
@@ -734,14 +734,9 @@
                     ]
                   }
                 ]
-              }
-            ]
-          },
-          {
-            "version": "2.0.3",
-            "tabs": [
+              },
               {
-                "tab": "指南",
+                "version": "2.0.3",
                 "groups": [
                   {
                     "group": "快速开始",
@@ -787,14 +782,9 @@
                     ]
                   }
                 ]
-              }
-            ]
-          },
-          {
-            "version": "2.0.2",
-            "tabs": [
+              },
               {
-                "tab": "指南",
+                "version": "2.0.2",
                 "groups": [
                   {
                     "group": "快速开始",
@@ -832,6 +822,41 @@
                     "group": "其他",
                     "pages": [
                       "versions/2.0.2/zh/others/faq"
+                    ]
+                  }
+                ]
+              }
+            ]
+          },
+          {
+            "tab": "ReMe",
+            "versions": [
+              {
+                "version": "latest",
+                "groups": [
+                  {
+                    "group": "快速开始",
+                    "pages": [
+                      "reme/latest/zh/overview",
+                      "reme/latest/zh/quickstart",
+                      "reme/latest/zh/concepts"
+                    ]
+                  },
+                  {
+                    "group": "使用",
+                    "pages": [
+                      "reme/latest/zh/integration/overview",
+                      "reme/latest/zh/integration/services",
+                      "reme/latest/zh/integration/python",
+                      "reme/latest/zh/integration/agents"
+                    ]
+                  },
+                  {
+                    "group": "资源",
+                    "pages": [
+                      "reme/latest/zh/reference",
+                      "reme/latest/zh/faq",
+                      "reme/latest/zh/contribution"
                     ]
                   }
                 ]
@@ -881,6 +906,102 @@
     {
       "source": "/stable/:slug*",
       "destination": "/versions/2.0.5/:slug*"
+    },
+    {
+      "source": "/reme/:version/en/index",
+      "destination": "/reme/latest/en/overview"
+    },
+    {
+      "source": "/reme/:version/zh/index",
+      "destination": "/reme/latest/zh/overview"
+    },
+    {
+      "source": "/reme/:version/en/guides",
+      "destination": "/reme/latest/en/integration/overview"
+    },
+    {
+      "source": "/reme/:version/zh/guides",
+      "destination": "/reme/latest/zh/integration/overview"
+    },
+    {
+      "source": "/reme/:version/en/guides/index",
+      "destination": "/reme/latest/en/integration/overview"
+    },
+    {
+      "source": "/reme/:version/zh/guides/index",
+      "destination": "/reme/latest/zh/integration/overview"
+    },
+    {
+      "source": "/reme/:version/en/guides/claude-code",
+      "destination": "/reme/latest/en/integration/agents"
+    },
+    {
+      "source": "/reme/:version/zh/guides/claude-code",
+      "destination": "/reme/latest/zh/integration/agents"
+    },
+    {
+      "source": "/reme/:version/en/guides/qwenpaw",
+      "destination": "/reme/latest/en/integration/agents"
+    },
+    {
+      "source": "/reme/:version/zh/guides/qwenpaw",
+      "destination": "/reme/latest/zh/integration/agents"
+    },
+    {
+      "source": "/reme/:version/en/integration/plugin",
+      "destination": "/reme/latest/en/integration/agents"
+    },
+    {
+      "source": "/reme/:version/zh/integration/plugin",
+      "destination": "/reme/latest/zh/integration/agents"
+    },
+    {
+      "source": "/reme/:version/en/integration/others",
+      "destination": "/reme/latest/en/integration/overview"
+    },
+    {
+      "source": "/reme/:version/zh/integration/others",
+      "destination": "/reme/latest/zh/integration/overview"
+    },
+    {
+      "source": "/reme/:version/en/integration/interfaces",
+      "destination": "/reme/latest/en/integration/overview"
+    },
+    {
+      "source": "/reme/:version/zh/integration/interfaces",
+      "destination": "/reme/latest/zh/integration/overview"
+    },
+    {
+      "source": "/reme/:version/en/integration/skill",
+      "destination": "/reme/latest/en/integration/agents"
+    },
+    {
+      "source": "/reme/:version/zh/integration/skill",
+      "destination": "/reme/latest/zh/integration/agents"
+    },
+    {
+      "source": "/reme/:version/en/support",
+      "destination": "/reme/latest/en/faq"
+    },
+    {
+      "source": "/reme/:version/zh/support",
+      "destination": "/reme/latest/zh/faq"
+    },
+    {
+      "source": "/reme/:version/en/contributing",
+      "destination": "/reme/latest/en/contribution"
+    },
+    {
+      "source": "/reme/:version/zh/contributing",
+      "destination": "/reme/latest/zh/contribution"
+    },
+    {
+      "source": "/reme/stable/:slug*",
+      "destination": "/reme/latest/:slug*"
+    },
+    {
+      "source": "/reme/0.4.0.6/:slug*",
+      "destination": "/reme/latest/:slug*"
     }
   ],
   "footer": {

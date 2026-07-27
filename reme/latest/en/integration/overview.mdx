@@ -1,0 +1,33 @@
+---
+title: "Overview"
+description: "Choose how an application or agent should run and use ReMe."
+---
+
+Every usage mode works with the same ReMe workspace and jobs. The main decisions are who owns the ReMe lifecycle and whether the host needs a shared service, a service-based agent integration, or in-process Python access.
+
+## Choose a Path
+
+Use the integration boundary that best matches the host:
+
+| Path | Choose it when | Responsibility |
+|---|---|---|
+| [Services](/reme/latest/en/integration/services) | ReMe should run independently and serve one or more clients | Expose MCP, CLI, or HTTP access |
+| [Python](/reme/latest/en/integration/python) | A Python or AgentScope application needs in-process ReMe | Call `ReMe.run_job()` or use `ReMeMiddleware` |
+| [Agents](/reme/latest/en/integration/agents) | An agent should connect to a deployed ReMe service | Use tools, a plugin, or a Skill over the service |
+
+Choose [Python](/reme/latest/en/integration/python) for AgentScope's first-party `ReMeMiddleware` or when another Python host should own ReMe in process. Choose [Agents](/reme/latest/en/integration/agents) for service-based agent integrations, and review [Services](/reme/latest/en/integration/services) when selecting MCP, CLI, or HTTP.
+
+## Runtime Model
+
+Direct Python and AgentScope embed ReMe in the host process. MCP, CLI, and HTTP access a separately running ReMe service. A Skill sits above those service interfaces and tells an agent when to use them.
+
+```text
+Python host ── ReMe.run_job() ─┐
+AgentScope ── ReMeMiddleware ──┴──> ReMe Application ──> workspace
+
+Agent / app ── MCP / CLI / HTTP ──> ReMe service ─────> workspace
+                 ↑
+              Skill rules
+```
+
+Keep one runtime owner for a workspace: either let the Python host manage the application lifecycle, or start one shared service with `reme start`. The runtime owns background indexing and scheduled consolidation; the host still owns session hooks, stable session identifiers, and decisions about when to recall or record.
