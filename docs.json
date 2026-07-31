@@ -459,7 +459,7 @@
                     ]
                   },
                   {
-                    "group": "Usage",
+                    "group": "Integration",
                     "pages": [
                       "reme/latest/en/integration/overview",
                       "reme/latest/en/integration/services",
@@ -843,7 +843,7 @@
                     ]
                   },
                   {
-                    "group": "使用",
+                    "group": "集成",
                     "pages": [
                       "reme/latest/zh/integration/overview",
                       "reme/latest/zh/integration/services",
