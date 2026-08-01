@@ -1,31 +1,31 @@
 ---
-title: "Skill Hub"
+title: "技能中心"
 description: "让用户安装他人发布的技能，并装配给自己的智能体。"
 ---
 
-Skill Hub 是一个 [技能](/versions/2.0.6dev/zh/building-blocks/tool/skill) 的目录，用户可以在应用内浏览并安装。技能本质上是一个文件夹，其中的 `SKILL.md` 告诉智能体如何完成某件事，另外还可以附带脚本等文件；有了 Hub，用户无需克隆仓库，也无需知道这些文件该放在哪里。
+技能中心是一个 [技能](/versions/2.0.6dev/zh/building-blocks/tool/skill) 的目录，用户可以在应用内浏览并安装。技能本质上是一个文件夹，其中的 `SKILL.md` 告诉智能体如何完成某件事，另外还可以附带脚本等文件；有了技能中心，用户无需克隆仓库，也无需知道这些文件该放在哪里。
 
 安装并不等于装配给智能体。安装只是把该技能加入用户自己的技能资源池，装配是另一个独立步骤：
 
 <Steps>
   <Step title="安装到资源池">
-    用户在卡片上读完 `SKILL.md` 后直接安装，无需填写任何内容。所有 Hub 汇入同一个资源池，装完之后就不必再关心它来自哪个注册中心。
+    用户在卡片上读完 `SKILL.md` 后直接安装，无需填写任何内容。所有中心汇入同一个资源池，装完之后就不必再关心它来自哪个来源。
   </Step>
   <Step title="装配给智能体的工作区">
     在会话中，用户从资源池里挑选，把技能解压到这个智能体的 [工作区](/versions/2.0.6dev/zh/deploy/workspace-manager)，智能体从此便可以遵照它执行。
   </Step>
 </Steps>
 
-资源池属于用户，而不属于某一次会话，因此安装一次可以装配到任意多个工作区。此外，本地文件夹也可以直接上传到工作区，无论它是否来自某个 Hub。
+资源池属于用户，而不属于某一次会话，因此安装一次可以装配到任意多个工作区。此外，本地文件夹也可以直接上传到工作区，无论它是否来自某个中心。
 
-## 可选的 Skill Hub
+## 内置的技能中心
 
-AgentScope 目前内置一个 Skill Hub，其他目录都可以通过 [自定义 Skill Hub](#自定义-skill-hub) 接入：
+AgentScope 目前内置一个技能中心，其他来源都可以通过 [自定义技能中心](#自定义技能中心) 接入：
 
-| 类 | 注册中心 | 说明 |
-|----|----------|------|
-| `ClawSkillHub` | [ClawHub](https://clawhub.ai) | 社区发布技能的公开注册中心。匿名即可访问，配置令牌可提高调用频率上限。 |
-| _即将支持_ | — | 更多注册中心正在接入中。 |
+| 类 | 来源 | 说明 |
+|----|------|------|
+| `ClawSkillHub` | [ClawHub](https://clawhub.ai) | 社区发布技能的公开目录。匿名即可访问，配置令牌可提高调用频率上限。 |
+| _即将支持_ | — | 更多来源正在接入中。 |
 
 `ClawSkillHub` 不传任何参数即可使用，下列字段均有默认值：
 
@@ -35,7 +35,7 @@ from agentscope.app.hub import ClawSkillHub
 hub = ClawSkillHub(
     # 用于接口路径和前端 URL，重启前后必须保持不变。
     hub_id="clawhub",
-    # 显示在前端的 Hub 切换列表中。
+    # 显示在前端的中心切换列表中。
     display_name="ClawHub",
     # 可选令牌。匿名请求同样可用，只是有频率限制。
     api_token=None,
@@ -44,11 +44,11 @@ hub = ClawSkillHub(
 
 | 参数 | 默认值 | 说明 |
 |------|--------|------|
-| `hub_id` | `"clawhub"` | 该 Hub 在接口路径与 URL 中的标识 |
-| `display_name` | `"ClawHub"` | 在 Hub 切换列表中显示的名称 |
+| `hub_id` | `"clawhub"` | 该中心在接口路径与 URL 中的标识 |
+| `display_name` | `"ClawHub"` | 在切换列表中显示的名称 |
 | `description` | ClawHub 简介 | 名称下方的一句话说明 |
 | `icon_url` | ClawHub 站点图标 | 名称旁的图标 |
-| `base_url` | `"https://clawhub.ai"` | 注册中心的接口地址 |
+| `base_url` | `"https://clawhub.ai"` | 来源的接口地址 |
 | `api_token` | `None` | ClawHub 令牌，仅影响调用频率上限 |
 | `timeout` | `30.0` | 单次请求超时时间，单位为秒 |
 | `max_retries` | `3` | 请求被限流后放弃前的重试次数 |
@@ -57,13 +57,13 @@ hub = ClawSkillHub(
 
 <Steps>
   <Step title="启动智能体服务">
-    Skill Hub 是 [智能体服务](/versions/2.0.6dev/zh/deploy/agent-service) 的能力之一，因此需要先跑起一个服务和一个前端。请按照 [智能体服务快速上手](/versions/2.0.6dev/zh/deploy/agent-service#试用示例) 的步骤，同时启动仓库自带的 [`examples/agent_service`](https://github.com/agentscope-ai/agentscope/tree/main/examples/agent_service) 后端与 [`examples/web_ui`](https://github.com/agentscope-ai/agentscope/tree/main/examples/web_ui) 前端。
+    技能中心是 [智能体服务](/versions/2.0.6dev/zh/deploy/agent-service) 的能力之一，因此需要先跑起一个服务和一个前端。请按照 [智能体服务快速上手](/versions/2.0.6dev/zh/deploy/agent-service#试用示例) 的步骤，同时启动仓库自带的 [`examples/agent_service`](https://github.com/agentscope-ai/agentscope/tree/main/examples/agent_service) 后端与 [`examples/web_ui`](https://github.com/agentscope-ai/agentscope/tree/main/examples/web_ui) 前端。
   </Step>
 
-  <Step title="注册 Hub">
-    通过 `skill_hubs` 参数把 Hub 传给 `create_app`，路由、市场页面与安装流程都会随之启用：
+  <Step title="注册技能中心">
+    通过 `skill_hubs` 参数把中心传给 `create_app`，路由、市场页面与安装流程都会随之启用：
 
-    ```python 注册一个 Skill Hub
+    ```python 注册一个技能中心
     from agentscope.app import create_app
     from agentscope.app.hub import ClawSkillHub
 
@@ -76,15 +76,15 @@ hub = ClawSkillHub(
     也可以注册多个，让用户在不同目录之间切换，各自使用独立的 `hub_id`。
 
     <Note>
-    两个 Skill Hub 使用同一个 `hub_id` 时，服务会在启动阶段直接报错，而不是静默覆盖其中一个。
+    两个技能中心使用同一个 `hub_id` 时，服务会在启动阶段直接报错，而不是静默覆盖其中一个。
     </Note>
   </Step>
 
   <Step title="浏览并安装">
-    重启服务后打开前端的 **Skill** 页面。侧边栏列出已注册的各个 Hub，以及用户自己的资源池 **Installed skills**。选中一个 Hub，搜索，点开卡片即可先阅读它的 `SKILL.md` 再决定。
+    重启服务后打开前端的 **Skill** 页面。侧边栏列出已注册的各个中心，以及用户自己的资源池 **Installed skills**。选中一个中心，搜索，点开卡片即可先阅读它的 `SKILL.md` 再决定。
 
-    <Frame caption="在 Skill 页面浏览一个技能注册中心。">
-      <img src="/images/agentscope/skill_hub.png" alt="浏览技能注册中心" />
+    <Frame caption="在 Skill 页面浏览一个技能中心。">
+      <img src="/images/agentscope/skill_hub.png" alt="浏览技能中心" />
     </Frame>
 
     点击 **Install** 即刻加入用户的资源池，无需填写任何内容。安装好的技能都汇总在 **Installed skills** 中：
@@ -109,16 +109,16 @@ hub = ClawSkillHub(
     上传有额度限制，避免单个用户占满工作区：最多 100 个文件，单文件不超过 50 MB，总计不超过 500 MB。若文件夹名称已被占用，新技能会以带数字后缀的名称安装，而不会覆盖原有内容。
 
     <Note>
-    装配一个已安装的技能时，其文件是在那一刻从 Hub 拉取的，因为安装只保存技能的描述信息，而不保存文件副本。如果此时 Hub 不可达，该技能会连同原因单独报错，同一请求中的其他技能照常装配成功。
+    装配一个已安装的技能时，其文件是在那一刻从中心拉取的，因为安装只保存技能的描述信息，而不保存文件副本。如果此时中心不可达，该技能会连同原因单独报错，同一请求中的其他技能照常装配成功。
     </Note>
   </Step>
 </Steps>
 
-## 自定义 Skill Hub
+## 自定义技能中心
 
-继承 `SkillHubBase` 就能把任意技能目录接成一个 Hub。需要实现三个方法，分别用于浏览、获取单个条目，以及提供压缩包：
+继承 `SkillHubBase` 就能把任意技能目录接成一个中心。需要实现三个方法，分别用于浏览、获取单个条目，以及提供压缩包：
 
-```python 接入内部目录的 Hub
+```python 接入内部目录的中心
 from agentscope.app.hub import (
     SkillArchive,
     SkillCard,
@@ -133,7 +133,7 @@ class InternalSkillHub(SkillHubBase):
     def __init__(self) -> None:
         super().__init__(
             hub_id="internal",
-            display_name="内部技能库",
+            display_name="内部技能目录",
             description="由平台团队发布的技能。",
         )
 
@@ -171,11 +171,11 @@ class InternalSkillHub(SkillHubBase):
         return SkillArchive(format="tar.gz", stream=response.aiter_bytes())
 ```
 
-另有三点决定了 Hub 的行为：
+另有三点决定了中心的行为：
 
 | 要点 | 说明 |
 |------|------|
-| 列表要轻 | 不要在 `list_skills` 中拉取 `SKILL.md`。逐条拉取会把一次请求放大为一页的条数，多数注册中心在第一屏就会触发限流。请放在 `get_skill` 中加载 |
+| 列表要轻 | 不要在 `list_skills` 中拉取 `SKILL.md`。逐条拉取会把一次请求放大为一页的条数，多数来源在第一屏就会触发限流。请放在 `get_skill` 中加载 |
 | 游标翻页 | 返回任意能让你续读的字符串即可；目录读完时返回 `None` |
 | 条目不存在 | `get_skill` 遇到未知 id 时抛出 `KeyError`，服务会将其转换为 404 |
 
@@ -231,7 +231,7 @@ class InternalSkillHub(SkillHubBase):
 
 ### 复用同一个 HTTP 客户端
 
-Hub 实例的生命周期与服务同长，因此可以持有一个连接池，而不必每次请求都新建。实现异步上下文管理器的两个方法即可，服务会在启动时进入每个 Hub，并在关闭时退出：
+中心实例的生命周期与服务同长，因此可以持有一个连接池，而不必每次请求都新建。实现异步上下文管理器的两个方法即可，服务会在启动时进入每个中心，并在关闭时退出：
 
 ```python 打开与关闭共享客户端
 class InternalSkillHub(SkillHubBase):
@@ -246,7 +246,7 @@ class InternalSkillHub(SkillHubBase):
 ## 延伸阅读
 
 <CardGroup cols={2}>
-  <Card title="MCP Hub" icon="plug" href="/versions/2.0.6dev/zh/deploy/hub/mcp-hub" cta="查看详情" arrow>
+  <Card title="MCP 中心" icon="plug" href="/versions/2.0.6dev/zh/deploy/hub/mcp-hub" cta="查看详情" arrow>
     面向 MCP 服务的同类能力。
   </Card>
   <Card title="Skill" icon="book-open" href="/versions/2.0.6dev/zh/building-blocks/tool/skill" cta="查看详情" arrow>

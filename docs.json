@@ -582,7 +582,7 @@
                       "versions/2.0.6dev/zh/deploy/rag",
                       "versions/2.0.6dev/zh/deploy/workspace-manager",
                       {
-                        "group": "MCP & Skill Hub",
+                        "group": "MCP 与技能中心",
                         "tag": "NEW",
                         "pages": [
                           "versions/2.0.6dev/zh/deploy/hub/overview",
