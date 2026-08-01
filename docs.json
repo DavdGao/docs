@@ -103,6 +103,15 @@
                       "versions/2.0.6dev/en/deploy/rag",
                       "versions/2.0.6dev/en/deploy/workspace-manager",
                       {
+                        "group": "MCP & Skill Hub",
+                        "tag": "NEW",
+                        "pages": [
+                          "versions/2.0.6dev/en/deploy/hub/overview",
+                          "versions/2.0.6dev/en/deploy/hub/mcp-hub",
+                          "versions/2.0.6dev/en/deploy/hub/skill-hub"
+                        ]
+                      },
+                      {
                         "group": "API",
                         "openapi": "versions/2.0.6dev/en/deploy/openapi.json"
                       }
@@ -572,6 +581,15 @@
                       "versions/2.0.6dev/zh/deploy/sharing",
                       "versions/2.0.6dev/zh/deploy/rag",
                       "versions/2.0.6dev/zh/deploy/workspace-manager",
+                      {
+                        "group": "MCP & Skill Hub",
+                        "tag": "NEW",
+                        "pages": [
+                          "versions/2.0.6dev/zh/deploy/hub/overview",
+                          "versions/2.0.6dev/zh/deploy/hub/mcp-hub",
+                          "versions/2.0.6dev/zh/deploy/hub/skill-hub"
+                        ]
+                      },
                       {
                         "group": "API",
                         "openapi": "versions/2.0.6dev/en/deploy/openapi.json"

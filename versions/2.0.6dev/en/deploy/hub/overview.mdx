@@ -1,0 +1,74 @@
+---
+title: "Overview"
+description: "Give your users a store to install MCP servers and skills from."
+---
+
+Register a hub on your [Agent Service](/versions/2.0.6dev/en/deploy/agent-service) and the frontend gains a searchable store: users find an MCP server or a skill, install it in a few clicks, and equip their agent with it. You ship no catalog, and adding a new one takes a single argument in `create_app`.
+
+Two kinds of hub exist, one per resource type:
+
+<CardGroup cols={2}>
+  <Card title="MCP Hub" icon="plug" href="/versions/2.0.6dev/en/deploy/hub/mcp-hub" cta="Read more" arrow>
+    Install [MCP](/versions/2.0.6dev/en/building-blocks/tool/mcp) servers with your own credentials.
+  </Card>
+  <Card title="Skill Hub" icon="book-open" href="/versions/2.0.6dev/en/deploy/hub/skill-hub" cta="Read more" arrow>
+    Install [skills](/versions/2.0.6dev/en/building-blocks/tool/skill) published by others.
+  </Card>
+</CardGroup>
+
+## How It Works
+
+Installing and equipping are two separate steps, so a user configures something once and reuses it everywhere afterwards:
+
+<Steps>
+  <Step title="Install into the pool">
+    The user browses a hub and installs an MCP server or a skill, along with any credentials they entered. Every hub feeds the same pool, so what came from which registry stops mattering once it is installed.
+  </Step>
+  <Step title="Equip an agent's workspace">
+    In a chat, the user picks from the pool to add it to that agent's [workspace](/versions/2.0.6dev/en/deploy/workspace-manager). Its tools reach the agent immediately.
+  </Step>
+</Steps>
+
+The pool belongs to the user, not to a chat. The same MCP server can be equipped in ten different workspaces without entering its API key again, and it outlives every one of them.
+
+<Tip>
+Hubs are optional. Without any registered, users can still add MCP servers by pasting a configuration and skills by uploading a folder.
+</Tip>
+
+## Enable Hubs
+
+Pass your hubs to `create_app` as two lists, one per resource type. Everything else, the routes and the store pages, comes with them:
+
+```python Register both kinds of hub
+from agentscope.app import create_app
+from agentscope.app.hub import ClawSkillHub, GitHubMCPHub
+
+app = create_app(
+    # ...existing code...
+    # Each hub becomes one browsable catalog in the frontend.
+    mcp_hubs=[GitHubMCPHub()],
+    skill_hubs=[ClawSkillHub()],
+)
+```
+
+Every hub carries a `hub_id` that addresses it in the API and in the frontend URL, so keep it stable across restarts. Two hubs of the same kind cannot share one.
+
+## Unavailable Hubs
+
+A hub is a remote service, so it can be slow, rate-limited, retired, or removed from your `create_app` call. The service degrades gracefully in each case:
+
+| Situation | What the user sees |
+|-----------|--------------------|
+| Browsing an unreachable hub | An error in the catalog area, with the rest of the page working |
+| Equipping several items when one fails | The failed item named with its reason, while the rest are still equipped |
+
+## Further Reading
+
+<CardGroup cols={2}>
+  <Card title="Agent Service" icon="server" href="/versions/2.0.6dev/en/deploy/agent-service" cta="Read more" arrow>
+    The hosting layer hubs plug into.
+  </Card>
+  <Card title="Workspace Manager" icon="folder-tree" href="/versions/2.0.6dev/en/deploy/workspace-manager" cta="Read more" arrow>
+    Where an equipped MCP server or skill runs.
+  </Card>
+</CardGroup>
