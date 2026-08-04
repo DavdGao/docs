@@ -3,15 +3,15 @@ title: "自定义渠道"
 description: "实现 ChannelBase，把智能体接入内置之外的平台。"
 ---
 
-要接入内置飞书、Discord 之外的平台，继承 `ChannelBase` 实现一个适配器（Adapter），再把这个类交给 `create_app`。适配器是"IM 平台 ↔ 智能体服务"之间的翻译层，平台差异全部收敛在这里，编排逻辑由框架统一处理。
+要接入内置飞书、Discord 之外的平台，继承 `ChannelBase` 实现一个渠道类，再把这个类交给 `create_app`。渠道类是"IM 平台 ↔ 智能体服务"之间的翻译层，平台差异全部收敛在这里，编排逻辑由框架统一处理。
 
-适配器类要做两件事：**自描述类型**（声明类型标识、凭据与配置），以及**实现行为**（维持连接、把消息规范化后发出、把回复发回平台）。
+渠道类要做两件事：**自描述类型**（声明类型标识、凭据与配置），以及**实现行为**（维持连接、把消息规范化后发出、把回复发回平台）。
 
 ## 类型描述
 
-适配器类把自己的类型信息挂在类上，框架据此渲染前端表单、校验输入、构造实例，无需额外的注册表。
+渠道类把自己的类型信息挂在类上，框架据此渲染前端表单、校验输入、构造实例，无需额外的注册表。
 
-```python 自描述的适配器类
+```python 自描述的渠道类
 from pydantic import BaseModel, Field
 from agentscope.app.channel import ChannelBase
 
@@ -53,7 +53,7 @@ class MyChannel(ChannelBase):
 | `start_listening()` | 建立长连接并循环接收；每条报文规范化为事件后 `await self._emit(event)`。应包含自动重连 |
 | `send_response(event, content)` | 把智能体回复发回平台。`content` 是 `TextBlock`/`DataBlock` 列表，与入站结构对称 |
 
-适配器不持有、也不 import 框架的编排层。框架在装配时通过 `bind(emit)` 注入一个回调，适配器只需在收到平台消息时调用它：
+渠道类不持有、也不 import 框架的编排层。框架在装配时通过 `bind(emit)` 注入一个回调，渠道类只需在收到平台消息时调用它：
 
 ```python 规范化并发出入站消息
 from agentscope.app.channel import ChannelEvent
@@ -76,7 +76,7 @@ async def start_listening(self) -> None:
 
 ## 能力声明
 
-框架依据适配器声明的 `capabilities` 决定如何降级发送。为你的平台如实声明即可：
+框架依据渠道类声明的 `capabilities` 决定如何降级发送。为你的平台如实声明即可：
 
 ```python 声明能力
 from agentscope.app.channel import ChannelCapability
@@ -101,7 +101,7 @@ class MyChannel(ChannelBase):
 
 ## 工具确认
 
-当智能体调用需要确认的工具时，框架会请适配器把确认请求呈现给用户，等用户决定后再继续。呈现方式由平台决定：能力强的平台用交互式卡片，纯文本平台可以发一句"回复 yes/no"的提示。
+当智能体调用需要确认的工具时，框架会请渠道类把确认请求呈现给用户，等用户决定后再继续。呈现方式由平台决定：能力强的平台用交互式卡片，纯文本平台可以发一句"回复 yes/no"的提示。
 
 实现两个可选方法即可支持确认：
 
@@ -110,10 +110,10 @@ class MyChannel(ChannelBase):
 | `present_confirm(event, req)` | 呈现确认请求。`req` 是 `RequireUserConfirmEvent`，从 `req.tool_calls` 取要展示的工具信息；把 `req.id` 嵌入按钮或提示中,返回一个句柄（如卡片消息 id）供后续更新；返回 `None` 表示无法呈现，框架按拒绝处理 |
 | `update_confirm(ref, outcome)` | 把已呈现的确认更新为最终态（卡片定格 / 文本回执） |
 
-用户做出决定后，适配器把它规范化为一个 `ConfirmDecisionEvent` 发出，与普通消息走同一个 `emit` 入口：
+用户做出决定后，渠道类把它规范化为一个 `ChannelConfirmationResultEvent` 发出，与普通消息走同一个 `emit` 入口：
 
 ```python 呈现与回传确认
-from agentscope.app.channel import ConfirmDecisionEvent
+from agentscope.app.channel import ChannelConfirmationResultEvent
 
 
 async def present_confirm(self, event, req) -> str | None:
@@ -129,15 +129,15 @@ async def present_confirm(self, event, req) -> str | None:
 
 async def _on_button_click(self, click) -> None:
     await self._emit(
-        ConfirmDecisionEvent(
+        ChannelConfirmationResultEvent(
             channel_id=self._channel_id,
-            request_id=click.request_id,  # 原样回传，适配器不需理解其含义
+            request_id=click.request_id,  # 原样回传，渠道类不需理解其含义
             approved=click.approved,
         ),
     )
 ```
 
-`request_id` 是一个不透明 token：适配器只负责往返，工具调用的业务数据全程由框架持有。因此这一往返天然是分布式安全的，用户隔多久点击、点击落到哪个节点都能正确处理。
+`request_id` 是一个不透明 token：渠道类只负责往返，工具调用的业务数据全程由框架持有。因此这一往返天然是分布式安全的，用户隔多久点击、点击落到哪个节点都能正确处理。
 
 <Warning>
 若平台无法呈现交互式确认（`capabilities.interactive=False`，或 `present_confirm` 返回 `None`），框架会把该次确认**按拒绝处理** —— 没有可询问的界面就不放行，这是安全默认。
@@ -155,7 +155,7 @@ async def _on_button_click(self, click) -> None:
 
 ## 启用渠道
 
-把你的适配器类加进 `create_app` 的 `channels`，服务即允许接入该平台。`channels` 声明的是**整个服务允许接入哪些渠道类型**；不传则不启用任何渠道，因此把需要的内置类型和自定义类型一并列出。
+把你的渠道类加进 `create_app` 的 `channels`，服务即允许接入该平台。`channels` 声明的是**整个服务允许接入哪些渠道类型**；不传则不启用任何渠道，因此把需要的内置类型和自定义类型一并列出。
 
 ```python 在 create_app 中启用
 from agentscope.app import create_app
