@@ -471,9 +471,9 @@
                     "group": "Integration",
                     "pages": [
                       "reme/latest/en/integration/overview",
-                      "reme/latest/en/integration/services",
-                      "reme/latest/en/integration/python",
-                      "reme/latest/en/integration/agents"
+                      "reme/latest/en/integration/deployment",
+                      "reme/latest/en/integration/python-sdk",
+                      "reme/latest/en/integration/plugins"
                     ]
                   },
                   {
@@ -864,9 +864,9 @@
                     "group": "集成",
                     "pages": [
                       "reme/latest/zh/integration/overview",
-                      "reme/latest/zh/integration/services",
-                      "reme/latest/zh/integration/python",
-                      "reme/latest/zh/integration/agents"
+                      "reme/latest/zh/integration/deployment",
+                      "reme/latest/zh/integration/python-sdk",
+                      "reme/latest/zh/integration/plugins"
                     ]
                   },
                   {
@@ -951,27 +951,27 @@
     },
     {
       "source": "/reme/:version/en/guides/claude-code",
-      "destination": "/reme/latest/en/integration/agents"
+      "destination": "/reme/latest/en/integration/plugins"
     },
     {
       "source": "/reme/:version/zh/guides/claude-code",
-      "destination": "/reme/latest/zh/integration/agents"
+      "destination": "/reme/latest/zh/integration/plugins"
     },
     {
       "source": "/reme/:version/en/guides/qwenpaw",
-      "destination": "/reme/latest/en/integration/agents"
+      "destination": "/reme/latest/en/integration/plugins"
     },
     {
       "source": "/reme/:version/zh/guides/qwenpaw",
-      "destination": "/reme/latest/zh/integration/agents"
+      "destination": "/reme/latest/zh/integration/plugins"
     },
     {
       "source": "/reme/:version/en/integration/plugin",
-      "destination": "/reme/latest/en/integration/agents"
+      "destination": "/reme/latest/en/integration/plugins"
     },
     {
       "source": "/reme/:version/zh/integration/plugin",
-      "destination": "/reme/latest/zh/integration/agents"
+      "destination": "/reme/latest/zh/integration/plugins"
     },
     {
       "source": "/reme/:version/en/integration/others",
@@ -991,11 +991,35 @@
     },
     {
       "source": "/reme/:version/en/integration/skill",
-      "destination": "/reme/latest/en/integration/agents"
+      "destination": "/reme/latest/en/integration/plugins"
     },
     {
       "source": "/reme/:version/zh/integration/skill",
-      "destination": "/reme/latest/zh/integration/agents"
+      "destination": "/reme/latest/zh/integration/plugins"
+    },
+    {
+      "source": "/reme/:version/en/integration/agents",
+      "destination": "/reme/latest/en/integration/plugins"
+    },
+    {
+      "source": "/reme/:version/zh/integration/agents",
+      "destination": "/reme/latest/zh/integration/plugins"
+    },
+    {
+      "source": "/reme/:version/en/integration/python",
+      "destination": "/reme/latest/en/integration/python-sdk"
+    },
+    {
+      "source": "/reme/:version/zh/integration/python",
+      "destination": "/reme/latest/zh/integration/python-sdk"
+    },
+    {
+      "source": "/reme/:version/en/integration/services",
+      "destination": "/reme/latest/en/integration/deployment"
+    },
+    {
+      "source": "/reme/:version/zh/integration/services",
+      "destination": "/reme/latest/zh/integration/deployment"
     },
     {
       "source": "/reme/:version/en/support",

@@ -54,13 +54,9 @@ ReMe 由此把记忆从 Agent 的内部状态，变成用户和 Agent 共同维�
 
 ## 文件化记忆系统
 
-ReMe 将原始证据、中间整理结果、长期记忆和派生系统状态分开保存。下面的流程展示了记忆如何在这些层次之间流动：
+ReMe 将原始证据、中间整理结果、长期记忆和派生系统状态分开保存。下图展示了人和 Agent 如何操作同一组文件，以及可重建索引如何支持记忆检索。
 
-```text
-对话 / 资料 ──> 原始来源 ──> 当日记录 ──> 长期记忆
-                                      │
-Agent 当前任务 <──── 搜索、链接与来源展开 ─────┘
-```
+![ReMe Memory as File 模型：共享文件、记忆整理与派生索引](/images/reme/memory-as-file.svg)
 
 Workspace 中的顶层目录与流程一一对应：
 
@@ -80,10 +76,10 @@ ReMe 当前通过 Auto Memory、Auto Resource 和 Auto Dream 完成整理，通�
 ## 选择接入方式
 
 <CardGroup cols={3}>
-  <Card title="Python" icon="python" href="/reme/latest/zh/integration/python">
+  <Card title="Python SDK" icon="python" href="/reme/latest/zh/integration/python-sdk">
     直接嵌入 ReMe，或使用 AgentScope 的第一方 `ReMeMiddleware`。
   </Card>
-  <Card title="Agent 接入" icon="robot" href="/reme/latest/zh/integration/agents">
+  <Card title="插件" icon="robot" href="/reme/latest/zh/integration/plugins">
     接入 Claude Code、QwenPaw 等使用共享服务的 Agent。
   </Card>
   <Card title="接入" icon="arrows-to-circle" href="/reme/latest/zh/integration/overview">

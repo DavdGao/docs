@@ -54,13 +54,9 @@ ReMe may need another system alongside it when you need strict transactions, com
 
 ## File-Native Memory System
 
-ReMe separates raw evidence, intermediate refinement, durable memory, and derived system state. The following flow shows how memory moves through those layers:
+ReMe separates raw evidence, intermediate refinement, durable memory, and derived system state. The diagram shows how people and agents work with the same files while rebuildable indexes support retrieval.
 
-```text
-conversations / resources -> sources -> daily notes -> durable memory
-                                                  |
-current agent task <-------- search and links -----+
-```
+![ReMe memory-as-file model showing shared files, memory refinement, and derived indexes](/images/reme/memory-as-file.svg)
 
 The workspace maps the flow to these top-level directories:
 
@@ -80,10 +76,10 @@ File operations, keyword search, and wikilink traversal do not require an LLM. C
 ## Choose an Integration
 
 <CardGroup cols={3}>
-  <Card title="Python" icon="python" href="/reme/latest/en/integration/python">
+  <Card title="Python SDK" icon="python" href="/reme/latest/en/integration/python-sdk">
     Embed ReMe directly or use AgentScope's first-party `ReMeMiddleware`.
   </Card>
-  <Card title="Agents" icon="robot" href="/reme/latest/en/integration/agents">
+  <Card title="Plugins" icon="robot" href="/reme/latest/en/integration/plugins">
     Connect service-based agents such as Claude Code or QwenPaw.
   </Card>
   <Card title="Integration" icon="arrows-to-circle" href="/reme/latest/en/integration/overview">
