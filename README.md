@@ -35,7 +35,7 @@ The current ReMe content is organized by user goal:
 | Area | Pages | Purpose |
 |---|---|---|
 | Get Started | [Overview](reme/latest/en/overview.mdx), [Quick Start](reme/latest/en/quickstart.mdx), [Concepts](reme/latest/en/concepts.mdx) | Explain the product, complete the first memory loop, and establish its principles |
-| Usage | [Integration overview](reme/latest/en/integration/overview.mdx), [Services](reme/latest/en/integration/services.mdx), [Python](reme/latest/en/integration/python.mdx), [Agents](reme/latest/en/integration/agents.mdx) | Choose and implement the correct runtime boundary |
+| Integration | [Integration overview](reme/latest/en/integration/overview.mdx), [Deployment](reme/latest/en/integration/deployment.mdx), [Python SDK](reme/latest/en/integration/python-sdk.mdx), [Plugins](reme/latest/en/integration/plugins.mdx) | Choose and implement the correct runtime boundary |
 | Resources | [Reference](reme/latest/en/reference.mdx), [FAQ](reme/latest/en/faq.mdx), [Contribution](reme/latest/en/contribution.mdx) | Find stable contracts, solve common problems, and contribute changes |
 
 Chinese pages mirror the same structure under `reme/latest/zh/`. Update both languages
