@@ -1,0 +1,184 @@
+---
+title: "自定义渠道"
+description: "实现 ChannelBase，把智能体接入内置之外的平台。"
+---
+
+要接入内置飞书、Discord 之外的平台，继承 `ChannelBase` 实现一个适配器（Adapter），再把这个类交给 `create_app`。适配器是"IM 平台 ↔ 智能体服务"之间的翻译层，平台差异全部收敛在这里，编排逻辑由框架统一处理。
+
+适配器类要做两件事：**自描述类型**（声明类型标识、凭据与配置），以及**实现行为**（维持连接、把消息规范化后发出、把回复发回平台）。
+
+## 类型描述
+
+适配器类把自己的类型信息挂在类上，框架据此渲染前端表单、校验输入、构造实例，无需额外的注册表。
+
+```python 自描述的适配器类
+from pydantic import BaseModel, Field
+from agentscope.app.channel import ChannelBase
+
+
+class MyChannel(ChannelBase):
+    channel_type = "my_platform"       # 唯一类型标识
+    display_name = "My Platform"       # 管理界面显示名
+    platform_bot_id_field = "token"    # 用哪个凭据字段做接入查重
+
+    class Credentials(BaseModel):      # 密钥字段，前端据此渲染凭据表单
+        token: str = Field(
+            title="Bot Token",
+            json_schema_extra={"format": "password"},  # 标记为机密
+        )
+
+    class Config(BaseModel):           # 非密钥开关，没有可留空
+        only_at_reply: bool = True
+
+    def __init__(
+        self,
+        channel_id: str,
+        credentials: "MyChannel.Credentials",
+        config: "MyChannel.Config",
+    ) -> None:
+        self._channel_id = channel_id
+        self._token = credentials.token          # 从校验后的凭据读取
+        self._only_at_reply = config.only_at_reply
+```
+
+框架用统一的 `(channel_id, credentials, config)` 构造每个实例：`credentials` / `config` 是已按你声明的 `Credentials` / `Config` 校验过的对象。`Credentials` 装密钥（加密、脱敏、不可变），`Config` 装非密钥开关（明文、可更新），二者都由用户在管理界面按渠道填写。
+
+## 必需方法
+
+除构造函数外，`ChannelBase` 有三个抽象方法必须实现，其余都有合理的默认实现（默认为空操作或"不支持"）。
+
+| 方法 | 职责 |
+|---|---|
+| `channel_id`（property） | 返回该渠道实例的唯一标识 |
+| `start_listening()` | 建立长连接并循环接收；每条报文规范化为事件后 `await self._emit(event)`。应包含自动重连 |
+| `send_response(event, content)` | 把智能体回复发回平台。`content` 是 `TextBlock`/`DataBlock` 列表，与入站结构对称 |
+
+适配器不持有、也不 import 框架的编排层。框架在装配时通过 `bind(emit)` 注入一个回调，适配器只需在收到平台消息时调用它：
+
+```python 规范化并发出入站消息
+from agentscope.app.channel import ChannelEvent
+from agentscope.message import TextBlock
+
+
+async def start_listening(self) -> None:
+    async for raw in self._connect():          # 平台长连接
+        event = ChannelEvent(
+            channel_id=self._channel_id,
+            channel_user_id=raw.user_id,        # 平台侧用户标识
+            chat_id=raw.chat_id,                # 驱动会话归组与路由匹配
+            content=[TextBlock(text=raw.text)],  # 与 Msg.content 同构
+            metadata={"chat_type": raw.chat_type},  # 供路由 match_key 匹配
+        )
+        await self._emit(event)                 # 交给框架，其余不用管
+```
+
+`ChannelEvent` 的 `content` 复用了与 `Msg.content` 相同的 `TextBlock` / `DataBlock` 类型，因此多模态消息无需额外转换即可交给智能体。
+
+## 能力声明
+
+框架依据适配器声明的 `capabilities` 决定如何降级发送。为你的平台如实声明即可：
+
+```python 声明能力
+from agentscope.app.channel import ChannelCapability
+
+
+class MyChannel(ChannelBase):
+    capabilities = ChannelCapability(
+        text=True,
+        markdown=True,
+        image=True,
+        interactive=True,          # 平台能否呈现交互式确认 UI
+        max_message_length=4000,   # 单条消息字符上限，超长自动分段
+    )
+```
+
+| 字段 | 含义 | 不支持时的行为 |
+|---|---|---|
+| `text` / `markdown` | 是否支持纯文本 / Markdown | — |
+| `image` / `file` | 是否支持图片 / 文件 | 降级为占位文本 |
+| `interactive` | 是否能呈现交互式确认 UI | 工具确认自动拒绝（见下节） |
+| `max_message_length` | 单条消息字符上限 | 超长回复自动分段 |
+
+## 工具确认
+
+当智能体调用需要确认的工具时，框架会请适配器把确认请求呈现给用户，等用户决定后再继续。呈现方式由平台决定：能力强的平台用交互式卡片，纯文本平台可以发一句"回复 yes/no"的提示。
+
+实现两个可选方法即可支持确认：
+
+| 方法 | 职责 |
+|---|---|
+| `present_confirm(event, req)` | 呈现确认请求。`req` 是 `RequireUserConfirmEvent`，从 `req.tool_calls` 取要展示的工具信息；把 `req.id` 嵌入按钮或提示中,返回一个句柄（如卡片消息 id）供后续更新；返回 `None` 表示无法呈现，框架按拒绝处理 |
+| `update_confirm(ref, outcome)` | 把已呈现的确认更新为最终态（卡片定格 / 文本回执） |
+
+用户做出决定后，适配器把它规范化为一个 `ConfirmDecisionEvent` 发出，与普通消息走同一个 `emit` 入口：
+
+```python 呈现与回传确认
+from agentscope.app.channel import ConfirmDecisionEvent
+
+
+async def present_confirm(self, event, req) -> str | None:
+    # req 是 RequireUserConfirmEvent，直接从它取要展示的工具
+    tool = req.tool_calls[0] if req.tool_calls else None
+    msg = await self._send_buttons(
+        event.chat_id,
+        text=f"是否允许执行工具 {tool.name if tool else 'tool'}？",
+        request_id=req.id,              # 把 request_id 塞进按钮，点击原样带回
+    )
+    return msg.id                       # 句柄，供 update_confirm 使用
+
+
+async def _on_button_click(self, click) -> None:
+    await self._emit(
+        ConfirmDecisionEvent(
+            channel_id=self._channel_id,
+            request_id=click.request_id,  # 原样回传，适配器不需理解其含义
+            approved=click.approved,
+        ),
+    )
+```
+
+`request_id` 是一个不透明 token：适配器只负责往返，工具调用的业务数据全程由框架持有。因此这一往返天然是分布式安全的，用户隔多久点击、点击落到哪个节点都能正确处理。
+
+<Warning>
+若平台无法呈现交互式确认（`capabilities.interactive=False`，或 `present_confirm` 返回 `None`），框架会把该次确认**按拒绝处理** —— 没有可询问的界面就不放行，这是安全默认。
+</Warning>
+
+## 可选方法
+
+以下方法均有默认实现，按平台能力选择性覆盖：
+
+| 方法 | 用途 |
+|---|---|
+| `on_start()` / `on_stop()` | 初始化 / 释放连接资源（HTTP 客户端、令牌等） |
+| `add_reaction()` / `remove_reaction()` | 给入站消息加 / 去表情反馈（如"处理中"） |
+| `list_bot_chats()` | 返回机器人所在的聊天列表，供管理端配置路由时选择 |
+
+## 启用渠道
+
+把你的适配器类加进 `create_app` 的 `channels`，服务即允许接入该平台。`channels` 声明的是**整个服务允许接入哪些渠道类型**；不传则不启用任何渠道，因此把需要的内置类型和自定义类型一并列出。
+
+```python 在 create_app 中启用
+from agentscope.app import create_app
+from agentscope.app.channel import DiscordChannel, FeishuChannel
+
+app = create_app(
+    storage=...,
+    message_bus=...,
+    workspace_manager=...,
+    # 允许接入的渠道类型：内置两个 + 你的自定义类型
+    channels=[FeishuChannel, DiscordChannel, MyChannel],
+)
+```
+
+启用后，`MyChannel` 就会出现在管理界面的平台类型列表里，用户即可像内置平台一样填凭据、配路由、创建渠道。
+
+## 延伸阅读
+
+<CardGroup cols={2}>
+  <Card title="会话路由" icon="route" href="/versions/2.0.6dev/zh/deploy/channel/routing" cta="查看详情" arrow>
+    自定义渠道同样复用统一的路由模型。
+  </Card>
+  <Card title="概览" icon="circle-info" href="/versions/2.0.6dev/zh/deploy/channel/overview" cta="查看详情" arrow>
+    回到渠道的整体工作方式。
+  </Card>
+</CardGroup>
