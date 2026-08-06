@@ -112,6 +112,17 @@
                         ]
                       },
                       {
+                        "group": "Channel",
+                        "tag": "NEW",
+                        "pages": [
+                          "versions/2.0.6dev/en/deploy/channel/overview",
+                          "versions/2.0.6dev/en/deploy/channel/routing",
+                          "versions/2.0.6dev/en/deploy/channel/feishu",
+                          "versions/2.0.6dev/en/deploy/channel/discord",
+                          "versions/2.0.6dev/en/deploy/channel/custom"
+                        ]
+                      },
+                      {
                         "group": "API",
                         "openapi": "versions/2.0.6dev/en/deploy/openapi.json"
                       }
@@ -588,6 +599,17 @@
                           "versions/2.0.6dev/zh/deploy/hub/overview",
                           "versions/2.0.6dev/zh/deploy/hub/mcp-hub",
                           "versions/2.0.6dev/zh/deploy/hub/skill-hub"
+                        ]
+                      },
+                      {
+                        "group": "消息渠道",
+                        "tag": "NEW",
+                        "pages": [
+                          "versions/2.0.6dev/zh/deploy/channel/overview",
+                          "versions/2.0.6dev/zh/deploy/channel/routing",
+                          "versions/2.0.6dev/zh/deploy/channel/feishu",
+                          "versions/2.0.6dev/zh/deploy/channel/discord",
+                          "versions/2.0.6dev/zh/deploy/channel/custom"
                         ]
                       },
                       {

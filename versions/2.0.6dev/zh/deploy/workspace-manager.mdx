@@ -1,7 +1,6 @@
 ---
 title: "工作区管理"
 description: "在服务中分配、管理智能体的运行环境（Workspace）"
-tag: "NEW"
 ---
 
 **工作区管理器**（Workspace Manager）持有隔离策略，并管理智能体服务中每个智能体的 [`Workspace`](/versions/2.0.6dev/zh/building-blocks/workspace/overview) 实例的生命周期。它是 `agentscope.workspace` 模块在服务侧的对应实现 —— 每一种 `WorkspaceBase` 子类都有一个配套的 `WorkspaceManagerBase` 的子类来负责创建、缓存与删除。
