@@ -3,7 +3,7 @@ title: "概览"
 description: "让 AgentScope 服务中的智能体入驻 IM 平台。"
 ---
 
-渠道（Channel）将 AgentScope 服务中的智能体接入外部即时通讯（IM）平台，让智能体能够在 IM 平台上直接与用户交流。对智能体而言，渠道只是 Web 端之外的另一个前端：两者消费同一条会话事件流，智能体代码无需任何改动。
+渠道（Channel）将 AgentScope 服务中的智能体接入外部即时通讯（IM）平台，让智能体能够在 IM 平台上直接与用户交流。
 
 AgentScope 服务中的渠道目前支持以下能力：
 
@@ -11,7 +11,8 @@ AgentScope 服务中的渠道目前支持以下能力：
 - 主动向指定的 IM 平台推送消息；
 - 通过路由规则，把消息分配给不同的智能体与会话；
 - 收发图片、文件等多模态内容；
-- 在对话中完成智能体工具调用的审批。
+- 在对话中完成智能体工具调用的审批；
+- 自动向智能体注入渠道上下文（所在平台、聊天名称、群聊 / 私聊），让回复更贴合场景。
 
 ## 支持的平台
 
@@ -24,7 +25,9 @@ AgentScope 服务中的渠道目前支持以下能力：
 | 钉钉 | `dingtalk` | Stream 模式 | Coming soon |
 | 企业微信 | `wecom` | 应用回调 | Coming soon |
 
-调用 `GET /channels/types` 可以获取所有类型及其凭据表单结构（JSON Schema），前端据此自动渲染配置表单，无需为每个平台硬编码。
+<Tip>
+在智能体服务中，调用 `GET /channels/types` 可以获取所有类型及其凭据表单结构（JSON Schema），前端据此自动渲染配置表单，无需为每个平台硬编码。
+</Tip>
 
 ## 启用渠道
 
@@ -46,9 +49,9 @@ app = create_app(
 
 ## 分布式部署
 
-渠道面向多节点部署：渠道配置、会话、消息总线等共享状态都存放在 Redis，多个节点对等运行，把 `storage` 与 `message_bus` 换成 Redis 版本即可横向扩展。
+渠道支持分布式多节点部署。渠道配置、会话、消息总线等共享状态都存放在 Redis 里，多个节点平等运行、各自处理请求；把 `storage` 与 `message_bus` 换成 Redis 版本，就能横向扩展到多台机器。
 
-连接层面目前**不做分片**：每个节点都为每个启用的渠道各自维持一条长连接。平台把某条消息投递到其中一个连接后，由该节点处理；即便消息被广播到多条连接，同一会话在同一时刻也只允许一个节点收集回复，因此不会重复响应。
+在连接层面，每个分布式部署节点都为启用的渠道各自维持一条长连接。同一条消息可能被平台投递到多个节点，但同一个会话在同一时刻只允许一个节点收集并发送回复，因此用户不会收到重复回答。
 
 ## HTTP 接口
 
@@ -60,11 +63,12 @@ app = create_app(
 | `POST /channels/` | 创建渠道 |
 | `GET /channels/` | 列出当前用户的渠道 |
 | `GET /channels/{id}` | 查看渠道详情（凭据脱敏） |
-| `PATCH /channels/{id}` | 更新路由 / 会话 / 呈现配置 |
+| `PATCH /channels/{id}` | 更新名称 / 路由 / 会话 / 平台配置 |
 | `DELETE /channels/{id}` | 删除渠道 |
 | `POST /channels/{id}/enable` | 启用渠道 |
 | `POST /channels/{id}/disable` | 停用渠道 |
-| `GET /channels/{id}/status` | 查看运行状态（多节点聚合） |
+| `GET /channels/{id}/status` | 查看渠道的实时连接状态 |
+| `GET /channels/{id}/sessions` | 列出该渠道派生出的会话 |
 | `GET /channels/{id}/chat_ids` | 列出机器人已知的聊天，便于配置路由 |
 
 各接口的完整请求与响应字段，见本章的 [API](/versions/2.0.6dev/en/deploy/openapi.json) 部分。

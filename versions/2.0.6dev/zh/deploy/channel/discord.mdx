@@ -90,6 +90,8 @@ Discord 渠道有一个平台专属开关：
 | 字段 | 说明 | 默认值 |
 |---|---|---|
 | `only_at_reply` | 服务器频道中是否仅在被 @ 时才回复。私信不受影响，始终回复 | `true` |
+| `show_thinking` | 是否把模型的思考过程一并展示在回复里 | `false` |
+| `show_tool_process` | 是否把工具调用与结果一并展示在回复里 | `false` |
 
 <Note>
 路由匹配 `chat_type` 时，服务器频道的值为 `guild`，私信为 `dm`。
@@ -98,14 +100,14 @@ Discord 渠道有一个平台专属开关：
 ## 验证与排查
 
 - 在管理界面查看渠道状态，或调用 `GET /channels/{id}/status` 确认连接已建立。
-- 若 Bot 在频道里不响应，先确认 **MESSAGE CONTENT INTENT** 已开启，再确认 `only_at_reply` 与 @ 行为符合预期。
+- 若 Bot 在服务器频道里不响应，先确认 **MESSAGE CONTENT INTENT** 已开启，再确认 `only_at_reply` 与 @ 行为符合预期。
 - 若 Bot 完全不上线，检查 Bot Token 是否正确、是否已邀请进服务器。
 
 ## 延伸阅读
 
 <CardGroup cols={2}>
   <Card title="会话路由" icon="route" href="/versions/2.0.6dev/zh/deploy/channel/routing" cta="查看详情" arrow>
-    把不同频道路由到不同的智能体。
+    把不同服务器频道路由到不同的智能体。
   </Card>
   <Card title="自定义渠道" icon="puzzle-piece" href="/versions/2.0.6dev/zh/deploy/channel/custom" cta="查看详情" arrow>
     接入内置之外的其他平台。
