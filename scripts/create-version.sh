@@ -98,34 +98,61 @@ def update_paths(obj):
 
 added = []
 skipped = []
+
+
+def version_holders(lang_entry):
+    """Yield every object that owns a 'versions' list for one language.
+
+    Versions sit directly on the language entry in the old layout, and one
+    level deeper (under each tab) once the site is split into tabs, so both
+    shapes are collected here.
+    """
+    if isinstance(lang_entry.get("versions"), list):
+        yield lang_entry
+    for tab in lang_entry.get("tabs", []) or []:
+        if isinstance(tab, dict) and isinstance(tab.get("versions"), list):
+            yield tab
+
+
 languages = data.get("navigation", {}).get("languages", []) or []
 for lang_entry in languages:
     lang = lang_entry.get("language", "?")
-    versions = lang_entry.get("versions", []) or []
 
-    # Skip if the new version already exists for this language
-    if any(v.get("version") == new_version for v in versions):
-        skipped.append(f"{lang}(already exists)")
-        continue
+    for holder in version_holders(lang_entry):
+        versions = holder["versions"]
+        # Name the holder after its tab so the log distinguishes the tabs
+        label = lang
+        if holder is not lang_entry:
+            label = f"{lang}/{holder.get('tab', '?')}"
 
-    # Locate the source version block
-    source_idx = next(
-        (i for i, v in enumerate(versions) if v.get("version") == source_version),
-        None,
-    )
-    if source_idx is None:
+        # Skip if the new version already exists here
+        if any(v.get("version") == new_version for v in versions):
+            skipped.append(f"{label}(already exists)")
+            continue
+
+        # Locate the source version block
+        source_idx = next(
+            (i for i, v in enumerate(versions) if v.get("version") == source_version),
+            None,
+        )
+        if source_idx is None:
+            # Tabs of other products carry their own versions, so a miss here
+            # is expected rather than an error
+            continue
+
+        # Deep-copy, update version field, then rewrite all internal paths
+        new_entry = copy.deepcopy(versions[source_idx])
+        new_entry["version"] = new_version
+        new_entry = update_paths(new_entry)
+
+        # Insert right BEFORE the source version so newer versions appear higher
+        versions.insert(source_idx, new_entry)
+        added.append(label)
+
+    if not any(a.startswith(lang) for a in added) and not any(
+        s.startswith(lang) for s in skipped
+    ):
         skipped.append(f"{lang}(source '{source_version}' not in navigation)")
-        continue
-
-    # Deep-copy, update version field, then rewrite all internal paths
-    new_entry = copy.deepcopy(versions[source_idx])
-    new_entry["version"] = new_version
-    new_entry = update_paths(new_entry)
-
-    # Insert right BEFORE the source version so newer versions appear higher
-    versions.insert(source_idx, new_entry)
-    lang_entry["versions"] = versions
-    added.append(lang)
 
 # Update redirects (/latest/ for dev, /stable/ for release)
 is_dev = new_version.endswith("dev")
@@ -137,9 +164,14 @@ for redirect in data.get("redirects", []) or []:
         redirect_updated = f"{target_source} -> /versions/{new_version}/:slug*"
         break
 
-with open(docs_json_path, "w", encoding="utf-8") as f:
+# Write through a temporary file in the same directory, then rename it over
+# the original. A plain "w" truncates the file first, so a running `mint dev`
+# re-reads it mid-write and reports "docs.json has invalid JSON"
+tmp_path = f"{docs_json_path}.tmp"
+with open(tmp_path, "w", encoding="utf-8") as f:
     json.dump(data, f, indent=2, ensure_ascii=False)
     f.write("\n")
+os.replace(tmp_path, docs_json_path)
 
 print(f"ADDED={','.join(added)}")
 print(f"SKIPPED={','.join(skipped)}")
@@ -161,8 +193,23 @@ if [ -n "$NAV_SKIPPED" ]; then
     echo "   Navigation skipped:    $NAV_SKIPPED"
 fi
 echo "   Redirect updated:      ${REDIRECT_UPDATED:-<no matching redirect found>}"
+
+# Only *.mdx files are rewritten above, so generated artifacts still carry the
+# source version. Point them out instead of patching them: an OpenAPI spec has
+# to be regenerated from the matching AgentScope release, not string-replaced
+STALE_FILES=$(grep -rl "$SOURCE_VERSION" "$TARGET_DIR" --include="*.json" 2>/dev/null || true)
+if [ -n "$STALE_FILES" ]; then
+    echo ""
+    echo "⚠️  These generated files still reference $SOURCE_VERSION:"
+    echo "$STALE_FILES" | sed 's|^|     |'
+    echo "     Regenerate them from the AgentScope $NEW_VERSION release."
+fi
+
 echo ""
 echo "Next steps:"
 echo "  1. Review docs.json to confirm the new version block looks right"
 echo "  2. Make your documentation changes in $TARGET_DIR"
 echo "  3. Run 'mint dev' to preview"
+echo ""
+echo "When promoting a dev version to a release, drop the old dev version"
+echo "afterwards: remove versions/<old-dev> and its navigation entries."
