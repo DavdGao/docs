@@ -1,9 +1,9 @@
 ---
-title: "插件"
-description: "通过进程内 Python、工具、Skill、plugin 和维护中的方案，将支持的 Agent 接入 ReMe。"
+title: "Agent 集成"
+description: "通过持续维护的进程内 Python、工具、Skill 和 plugin 方案，将支持的 Agent 接入 ReMe。"
 ---
 
-本页介绍维护中的宿主接入。Claude Code、Hermes、OpenClaw、Codex 和其他可执行 CLI 的 Agent 连接[已部署的 ReMe 服务](/reme/latest/zh/integration/deployment)；QwenPaw 使用进程内 Python 路径。AgentScope 的 `ReMeMiddleware` 应使用 [Python 接入](/reme/latest/zh/integration/python-sdk#agentscope)。
+本页介绍持续维护的宿主接入方案。Claude Code、Hermes、OpenClaw、Codex 和其他可执行 CLI 的 Agent 连接[已部署的 ReMe 服务](/reme/latest/zh/integration/deployment)；QwenPaw 使用进程内 Python 路径。AgentScope 的 `ReMeMiddleware` 应使用 [Python 接入](/reme/latest/zh/integration/python-sdk#agentscope)。
 
 ## 选择接入模式
 
@@ -41,9 +41,9 @@ Skill 不负责启动 ReMe，也不会自行补全缺失的对话历史。
 
 Plugin 将特定宿主所需的服务连接配置、工具、Skill 和会话 hook 等能力打包在一起。它应连接已经部署的 ReMe 服务，并利用宿主生命周期实现自动召回或记录。安装 plugin 并不意味着它会启动或管理 ReMe。
 
-## 维护中的集成
+## 持续维护的集成
 
-ReMe 目前为以下宿主提供或记录了维护中的整合路径：
+ReMe 目前为以下宿主提供或记录了持续维护的接入方案：
 
 | 宿主 | 接入方式 | 召回 | 记录 |
 |---|---|---|---|
@@ -132,7 +132,7 @@ hermes memory setup
 
 ### 3. 理解失败行为
 
-召回在模型调用前使用独立的短超时；已完成的 turn 排队交给串行后台 writer，关闭时会获得有界的排空时间。健康检查、检索和记录使用相互独立的冷却，单条路径失败不会无必要地禁用其他路径。配置字段和生命周期详见 [Hermes plugin README](https://github.com/agentscope-ai/ReMe/blob/main/plugins/hermes_agent/README.md)。
+召回在模型调用前使用独立的短超时。已完成的轮次会进入队列，由串行后台写入器处理；服务关闭时，会在限定时间内排空队列。健康检查、检索和记录分别使用独立的冷却机制，某条路径失败时不会连带禁用其他路径。配置字段和生命周期详见 [Hermes plugin README](https://github.com/agentscope-ai/ReMe/blob/main/plugins/hermes_agent/README.md)。
 
 ## QwenPaw
 

@@ -13,7 +13,7 @@ description: "选择应用或 Agent 运行和使用 ReMe 的方式。"
 |---|---|---|
 | [部署](/reme/latest/zh/integration/deployment) | ReMe 需要独立运行并服务一个或多个 client | 提供 MCP、CLI、HTTP 或 ReMe Studio 访问方式 |
 | [Python SDK](/reme/latest/zh/integration/python-sdk) | Python 或 AgentScope 应用需要进程内使用 ReMe | 调用 `ReMe.run_job()` 或使用 `ReMeMiddleware` |
-| [Agent 集成](/reme/latest/zh/integration/plugins) | 支持的 Agent 需要维护中的进程内或服务接入路径 | 使用 QwenPaw Python 路径、宿主 plugin 或 CLI Skill |
+| [Agent 集成](/reme/latest/zh/integration/plugins) | 支持的 Agent 需要持续维护的进程内或服务接入方案 | 使用 QwenPaw Python 路径、宿主 plugin 或 CLI Skill |
 
 AgentScope 的第一方 `ReMeMiddleware`，以及其他需要在进程内管理 ReMe 的 Python 宿主，应选择 [Python SDK](/reme/latest/zh/integration/python-sdk)。QwenPaw、Claude Code、Hermes、OpenClaw 或 Codex 的具体方案见 [Agent 集成](/reme/latest/zh/integration/plugins)；选择 MCP、CLI、HTTP 或 Studio 时查看[部署](/reme/latest/zh/integration/deployment)。
 

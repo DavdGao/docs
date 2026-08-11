@@ -1,6 +1,6 @@
 ---
-title: "Plugins"
-description: "Connect supported agents to ReMe with in-process Python, tools, Skills, plugins, and maintained integrations."
+title: "Agent Integrations"
+description: "Connect supported agents to ReMe through maintained in-process Python, tool, Skill, and plugin integrations."
 ---
 
 This page covers maintained host integrations. Claude Code, Hermes, OpenClaw, Codex, and other CLI-capable agents connect to a [deployed ReMe service](/reme/latest/en/integration/deployment); QwenPaw uses the in-process Python path. For AgentScope's `ReMeMiddleware`, use the [Python integration](/reme/latest/en/integration/python-sdk#agentscope).
@@ -132,7 +132,7 @@ Select `reme`, confirm the HTTP endpoint, then run `hermes memory status`. Confi
 
 ### 3. Understand Failure Behavior
 
-Recall uses a short independent timeout before model calls. Completed turns are queued for a serial background writer, and shutdown gets a bounded drain interval. Health, retrieval, and recording cooldowns are isolated so one failing path does not unnecessarily disable the others. See the [Hermes plugin README](https://github.com/agentscope-ai/ReMe/blob/main/plugins/hermes_agent/README.md) for configuration fields and lifecycle details.
+Recall uses a short independent timeout before model calls. Completed turns are queued for a serial background writer. On shutdown, the writer is given a bounded interval to drain. Health, retrieval, and recording cooldowns are isolated so one failing path does not unnecessarily disable the others. See the [Hermes plugin README](https://github.com/agentscope-ai/ReMe/blob/main/plugins/hermes_agent/README.md) for configuration fields and lifecycle details.
 
 ## QwenPaw
 
