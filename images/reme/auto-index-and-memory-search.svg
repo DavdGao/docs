@@ -106,7 +106,7 @@
     <text class="chip-text" x="190" y="536">reindex adds resource + JSONL.</text>
     <line class="line" x1="410" y1="500" x2="410" y2="544"/>
     <text class="chip-title" x="454" y="514">BM25 is enabled by default</text>
-    <text class="chip-text" x="454" y="536">Recall candidates cap at 200; embeddings are opt-in.</text>
+    <text class="chip-text" x="454" y="536">Recall cap: 200; embeddings are opt-in.</text>
     <line class="line" x1="720" y1="500" x2="720" y2="544"/>
     <text class="chip-title" x="764" y="514">Results stay compact first</text>
     <text class="chip-text" x="764" y="536">Use read or traverse for deeper expansion.</text>
