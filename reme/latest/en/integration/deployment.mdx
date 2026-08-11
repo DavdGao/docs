@@ -13,7 +13,7 @@ MCP, CLI, and HTTP reach the same ReMe workspace and jobs. Choose the boundary y
 |---|---|---|
 | MCP | Agents and applications with an MCP client | Discovered tools over a shared MCP endpoint |
 | CLI | Agents and automation that can run shell commands | Commands sent to the running ReMe service |
-| HTTP | Language-neutral applications and custom clients | JSON requests to job endpoints |
+| HTTP | Language-neutral applications, custom clients, and ReMe Studio | JSON requests to job endpoints and an optional web UI |
 
 MCP and HTTP are service protocols. The CLI is a client for the running service and is usually the simplest boundary for shell-capable agents.
 
@@ -59,6 +59,8 @@ The default launch mode exposes an HTTP service:
 reme start
 ```
 
+When the web build is available, the same address serves ReMe Studio at `/`. Studio browses, edits, and searches the workspace, streams conversations with the read-only workspace agent, and visualizes the digest wikilink graph. Disable it with `service.web_enabled=false`, or set `service.web_static_dir` / `REME_WEB_STATIC_DIR` to a custom build. Missing web assets do not prevent the Job API from starting.
+
 Each served job maps to `POST /{action}` with a JSON body:
 
 ```bash
@@ -68,6 +70,10 @@ curl -s http://127.0.0.1:2333/search \
 ```
 
 Use `/docs` or `/openapi.json` on the running service for schemas that match the installed version. Avoid copying a fixed parameter table into client code.
+
+<Note>
+HTTP exposes stream jobs such as `chat` with server-sent events. MCP currently skips stream jobs and background jobs.
+</Note>
 
 ## Next Step
 

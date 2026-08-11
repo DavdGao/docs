@@ -19,7 +19,7 @@ No. File operations, keyword search, and wikilink traversal work without one. Th
 
 ### Where is memory stored?
 
-By default, under `.reme/` in the launch directory. Use `workspace_dir=` to choose another location. The durable state is ordinary files suitable for git or file backup; `metadata/` is rebuildable derived state.
+By default, under `.reme/` in the launch directory. Use `workspace_dir=` to choose another location. Durable memory is stored in ordinary files suitable for git or file backup; `metadata/` is rebuildable derived state, and `mem_session/` contains generated agent-wrapper runtime state.
 
 ### Can I edit memory directly?
 
@@ -87,11 +87,15 @@ reme reindex
 Confirm that:
 
 1. the ReMe service is running;
-2. the file is under `daily/`, `digest/`, or `resource/`;
-3. its suffix is supported by the relevant watcher;
+2. a Markdown memory is under `daily/` or `digest/`;
+3. a source file under `resource/` has a supported `md`, `txt`, `json`, `jsonl`, `csv`, `yaml`, or `html` suffix and Auto Resource has produced its daily card;
 4. the background watcher had a moment to process the write.
 
-Run `reme reindex` when necessary. Files outside watched locations do not update the index automatically.
+Run `reme reindex` when necessary. A full rebuild also scans `resource/` and JSONL, while the live index watcher intentionally handles only Markdown in `daily/` and `digest/`.
+
+### ReMe Studio is not available
+
+Studio is served at the HTTP service root only when a web build can be found. The Job API remains available without it. Confirm that the service uses the HTTP backend and either install a package containing the build or set `service.web_static_dir` / `REME_WEB_STATIC_DIR` to a directory containing `index.html`.
 
 ### Claude Code did not record a session
 

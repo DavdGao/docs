@@ -1,9 +1,9 @@
 ---
 title: "Plugins"
-description: "Connect agents to a deployed ReMe service with tools, Skills, plugins, and maintained integrations."
+description: "Connect supported agents to ReMe with in-process Python, tools, Skills, plugins, and maintained integrations."
 ---
 
-This page covers service-based agent integrations. First [deploy a ReMe service](/reme/latest/en/integration/deployment), then choose how the agent will connect and when it should recall or record memory. For AgentScope's in-process `ReMeMiddleware`, use the [Python integration](/reme/latest/en/integration/python-sdk#agentscope) instead.
+This page covers maintained host integrations. Claude Code, Hermes, OpenClaw, Codex, and other CLI-capable agents connect to a [deployed ReMe service](/reme/latest/en/integration/deployment); QwenPaw uses the in-process Python path. For AgentScope's `ReMeMiddleware`, use the [Python integration](/reme/latest/en/integration/python-sdk#agentscope).
 
 ## Choose an Integration Pattern
 
@@ -43,14 +43,16 @@ A plugin packages the pieces needed by a specific host, such as service connecti
 
 ## Maintained Integrations
 
-ReMe currently includes maintained integration packages for these hosts:
+ReMe currently documents or includes maintained integration paths for these hosts:
 
 | Host | Integration | Recall | Recording |
 |---|---|---|---|
 | Claude Code | ReMe plugin | MCP tools and `reme-memory` Skill | Automatic Stop hook |
-| QwenPaw | `reme_memory` Skill | ReMe CLI | QwenPaw session lifecycle |
+| Hermes Agent | ReMe memory-provider plugin | HTTP search before model calls | Queued `auto_memory` after completed turns |
+| QwenPaw | In-process Python API | Host-managed search and retrieval | Host lifecycle and model configuration |
+| OpenClaw / Codex | `reme_memory` Skill | ReMe CLI | Requires explicit host lifecycle hooks |
 
-The following sections cover their host-specific setup and verification.
+The following sections cover their host-specific setup and verification. The bundled Skill can also be adapted by any CLI-capable agent.
 
 ## Claude Code
 
@@ -101,36 +103,42 @@ reme search query="<phrase from the conversation>" limit=5
 
 The Stop hook runs asynchronously and is best-effort: an unavailable ReMe service does not block Claude Code. If you change the server port, update `plugins/claude_code/reme/.mcp.json` too. See the [plugin README](https://github.com/agentscope-ai/ReMe/blob/main/plugins/claude_code/README.md) for hook overrides and log locations.
 
-## QwenPaw
+## Hermes Agent
 
-QwenPaw integrates through the bundled ReMe Skill described above. The Skill defines when the Agent should recall or record; the ReMe service handles persistence, indexing, and refinement.
+The Hermes memory-provider plugin connects to a separately managed ReMe HTTP service. It recalls relevant memory before each model call and records completed turns through `auto_memory` without blocking the main conversation path.
 
 ### 1. Start ReMe
 
-Keep the default HTTP service running:
+Use a dedicated workspace and endpoint for each Hermes profile that must remain isolated:
 
 ```bash
-reme start
+reme start \
+  workspace_dir="$HOME/.reme-hermes-default" \
+  service.backend=http \
+  service.host=127.0.0.1 \
+  service.port=2333
 ```
 
-Conversation refinement and consolidation require the LLM environment described in the [Quick Start model setup](/reme/latest/en/quickstart#5-enable-memory-refinement-when-needed).
+BM25 recall does not require embeddings, but automatic recording needs a working LLM configuration.
 
-### 2. Install the ReMe Skill
+### 2. Install and Configure the Plugin
 
-Install the repository's complete [`skills/reme_memory/`](https://github.com/agentscope-ai/ReMe/tree/main/skills/reme_memory) directory in QwenPaw's skill location. Keep `SKILL.md` and its behavior rules together.
+```bash
+hermes plugins install agentscope-ai/ReMe/plugins/hermes_agent
+hermes memory setup
+```
 
-Once loaded, QwenPaw should:
+Select `reme`, confirm the HTTP endpoint, then run `hermes memory status`. Configuration is stored in `$HERMES_HOME/reme.json`. A single ReMe workspace shares recalled memory, so use separate workspaces and endpoints when Hermes profiles must not share context.
 
-- search and read before answering about past conversations, preferences, decisions, or project history;
-- record durable information with `auto_memory` rather than saving every turn;
-- obtain explicit consent before storing sensitive information;
-- provide a stable `session_id` from its session lifecycle.
+### 3. Understand Failure Behavior
 
-<Note>
-`skills/qwenpaw_memory` directly maintains `MEMORY.md` and `memory/*.md`; it does not call ReMe. Use `skills/reme_memory` for ReMe integration.
-</Note>
+Recall uses a short independent timeout before model calls. Completed turns are queued for a serial background writer, and shutdown gets a bounded drain interval. Health, retrieval, and recording cooldowns are isolated so one failing path does not unnecessarily disable the others. See the [Hermes plugin README](https://github.com/agentscope-ai/ReMe/blob/main/plugins/hermes_agent/README.md) for configuration fields and lifecycle details.
 
-### 3. Verify Recall and Recording
+## QwenPaw
+
+QwenPaw's recommended path is to embed ReMe through its Python API so the host can reuse the application lifecycle and model configuration while keeping memory local and file-based. Follow the [Python SDK guide](/reme/latest/en/integration/python-sdk) and keep exactly one runtime owner for the workspace.
+
+### Verify Recall and Recording
 
 Write a test memory from a terminal:
 
@@ -142,6 +150,12 @@ reme write \
   content="User preference: lead with the conclusion in technical explanations."
 ```
 
-Ask QwenPaw how you prefer technical explanations. Confirm that it searches ReMe and reads the file before answering.
+Ask QwenPaw how you prefer technical explanations. Confirm that its in-process integration searches ReMe and reads the file before answering.
 
-After providing another durable fact, end the session and search for its keywords. If the installed QwenPaw version has no session-end hook, let the application call `auto_memory` explicitly or enable recall only; do not invent a missing message history.
+After providing another durable fact, end the session and search for its keywords. The host must supply a stable session identifier and its real message history; do not invent missing conversation content.
+
+## OpenClaw, Codex, and Other CLI-Capable Agents
+
+Install the complete [`skills/reme_memory/`](https://github.com/agentscope-ai/ReMe/tree/main/skills/reme_memory) directory in the host's Skill location and keep the ReMe HTTP service running. The Skill uses the CLI to search, read, traverse, and record memory. `read` accepts Markdown only; for other text results, inspect size with `reme stat` before using `reme load`.
+
+The Skill does not provide automatic recording by itself. Connect `auto_memory` to an explicit host session or turn hook, pass a stable `session_id`, and provide only actual conversation messages. ReMe omits recalled tool results and base64 data when persisting transcripts so retrieved or binary content does not become source conversation material.

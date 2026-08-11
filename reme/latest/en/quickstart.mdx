@@ -32,7 +32,9 @@ reme start
 The default workspace is `.reme/` under the launch directory, and the service listens on `127.0.0.1:2333`. In another terminal, check it:
 
 ```bash
+reme version
 reme health_check
+reme help
 ```
 
 Use another port when necessary:
@@ -40,6 +42,8 @@ Use another port when necessary:
 ```bash
 reme start service.port=8181
 ```
+
+When the package includes the web build, open [http://127.0.0.1:2333/](http://127.0.0.1:2333/) for **ReMe Studio**. It can browse, edit, and search the workspace, chat with the read-only workspace agent, and inspect the digest wikilink graph. Set `service.web_enabled=false` to disable it, or use `service.web_static_dir` / `REME_WEB_STATIC_DIR` for a custom build. The Job API still works when no web build is found.
 
 ## 3. Write a Memory
 
@@ -59,11 +63,17 @@ ReMe adds the `.md` suffix and writes frontmatter plus content to `.reme/digest/
 
 ## 4. Search and Read
 
-The background index normally discovers the file automatically. If it does not appear immediately, wait briefly or run `reme reindex` once.
+The background index watches Markdown under `daily/` and `digest/`, so it normally discovers the file automatically. If it does not appear immediately, wait briefly or run `reme reindex` once. The full rebuild also scans `resource/` and JSONL.
 
 ```bash
 reme search query="agent memory Markdown" limit=5
 reme read path=digest/wiki/quick-start-demo.md
+```
+
+Search also accepts an inclusive date range:
+
+```bash
+reme search query="agent memory Markdown" start_date=2026-08-01 end_date=2026-08-12 limit=5
 ```
 
 Open the file in the workspace too. Matching CLI output and disk content confirm that the minimum loop works.
@@ -73,7 +83,8 @@ After completing the loop, the workspace contains these top-level areas:
 ```text
 .reme/
 ├── metadata/    derived indexes, graph, and runtime state
-├── session/     raw sessions
+├── session/     source conversations
+├── mem_session/ generated agent-wrapper sessions and configuration
 ├── resource/    source resources
 ├── daily/       daily refinement
 └── digest/      durable memory

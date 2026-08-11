@@ -11,15 +11,15 @@ description: "选择应用或 Agent 运行和使用 ReMe 的方式。"
 
 | 方式 | 适用场景 | 职责 |
 |---|---|---|
-| [部署](/reme/latest/zh/integration/deployment) | ReMe 需要独立运行并服务一个或多个 client | 提供 MCP、CLI 或 HTTP 访问方式 |
+| [部署](/reme/latest/zh/integration/deployment) | ReMe 需要独立运行并服务一个或多个 client | 提供 MCP、CLI、HTTP 或 ReMe Studio 访问方式 |
 | [Python SDK](/reme/latest/zh/integration/python-sdk) | Python 或 AgentScope 应用需要进程内使用 ReMe | 调用 `ReMe.run_job()` 或使用 `ReMeMiddleware` |
-| [插件](/reme/latest/zh/integration/plugins) | Agent 需要连接已部署的 ReMe 服务 | 在服务之上应用工具、plugin 或 Skill |
+| [Agent 集成](/reme/latest/zh/integration/plugins) | 支持的 Agent 需要维护中的进程内或服务接入路径 | 使用 QwenPaw Python 路径、宿主 plugin 或 CLI Skill |
 
-AgentScope 的第一方 `ReMeMiddleware`，以及其他需要在进程内管理 ReMe 的 Python 宿主，应选择 [Python SDK](/reme/latest/zh/integration/python-sdk)。需要连接共享服务的 Agent 应选择[插件](/reme/latest/zh/integration/plugins)；选择 MCP、CLI 或 HTTP 时查看[部署](/reme/latest/zh/integration/deployment)。
+AgentScope 的第一方 `ReMeMiddleware`，以及其他需要在进程内管理 ReMe 的 Python 宿主，应选择 [Python SDK](/reme/latest/zh/integration/python-sdk)。QwenPaw、Claude Code、Hermes、OpenClaw 或 Codex 的具体方案见 [Agent 集成](/reme/latest/zh/integration/plugins)；选择 MCP、CLI、HTTP 或 Studio 时查看[部署](/reme/latest/zh/integration/deployment)。
 
 ## 运行模型
 
-直接使用 Python 或 AgentScope 时，ReMe 嵌入宿主进程；MCP、CLI 和 HTTP 访问独立运行的 ReMe 服务。插件和 Skill 位于 client 侧，负责决定 Agent 何时通过这些接口使用记忆。
+直接使用 Python、AgentScope 或 QwenPaw 进程内接入时，ReMe 嵌入宿主进程；MCP、CLI、HTTP 和 ReMe Studio 访问独立运行的 ReMe 服务。插件和 Skill 位于 client 侧，负责决定 Agent 何时通过这些接口使用记忆。
 
 ![ReMe 运行模型：进程内 Python SDK 与共享服务是两条独立路径，每个 workspace 同时只能有一个运行时所有者](/images/reme/runtime-model.svg)
 

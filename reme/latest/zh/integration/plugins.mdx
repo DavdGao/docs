@@ -1,9 +1,9 @@
 ---
 title: "插件"
-description: "通过工具、Skill、plugin 和现成整合，将 Agent 接入已部署的 ReMe 服务。"
+description: "通过进程内 Python、工具、Skill、plugin 和维护中的方案，将支持的 Agent 接入 ReMe。"
 ---
 
-本页介绍使用共享服务的 Agent 接入。请先[部署 ReMe 服务](/reme/latest/zh/integration/deployment)，再选择 Agent 如何连接，以及何时召回或记录记忆。AgentScope 的进程内 `ReMeMiddleware` 应使用 [Python 接入](/reme/latest/zh/integration/python-sdk#agentscope)。
+本页介绍维护中的宿主接入。Claude Code、Hermes、OpenClaw、Codex 和其他可执行 CLI 的 Agent 连接[已部署的 ReMe 服务](/reme/latest/zh/integration/deployment)；QwenPaw 使用进程内 Python 路径。AgentScope 的 `ReMeMiddleware` 应使用 [Python 接入](/reme/latest/zh/integration/python-sdk#agentscope)。
 
 ## 选择接入模式
 
@@ -43,14 +43,16 @@ Plugin 将特定宿主所需的服务连接配置、工具、Skill 和会话 hoo
 
 ## 维护中的集成
 
-ReMe 目前为以下宿主提供了现成的整合方案：
+ReMe 目前为以下宿主提供或记录了维护中的整合路径：
 
 | 宿主 | 接入方式 | 召回 | 记录 |
 |---|---|---|---|
 | Claude Code | ReMe plugin | MCP 工具与 `reme-memory` Skill | Stop hook 自动记录 |
-| QwenPaw | `reme_memory` Skill | ReMe CLI | QwenPaw 会话生命周期 |
+| Hermes Agent | ReMe memory-provider plugin | 每次模型调用前用 HTTP 搜索 | 每轮完成后排队调用 `auto_memory` |
+| QwenPaw | 进程内 Python API | 宿主管理搜索和读取 | 宿主生命周期和模型配置 |
+| OpenClaw / Codex | `reme_memory` Skill | ReMe CLI | 需要显式宿主生命周期 hook |
 
-下面分别介绍这些方案的宿主专用配置与验证步骤。
+下面分别介绍这些方案的宿主专用配置与验证步骤。其他可执行 CLI 的 Agent 也可以改造内置 Skill。
 
 ## Claude Code
 
@@ -101,36 +103,42 @@ reme search query="<刚才对话中的关键词>" limit=5
 
 Stop hook 异步运行，并采用 best-effort 策略：ReMe 服务不可用时不会阻塞 Claude Code。修改服务端口时，还需同步更新 `plugins/claude_code/reme/.mcp.json`。Hook 覆盖项和日志位置见 [plugin README](https://github.com/agentscope-ai/ReMe/blob/main/plugins/claude_code/README.md)。
 
-## QwenPaw
+## Hermes Agent
 
-QwenPaw 通过上文介绍的 ReMe Skill 接入。Skill 定义 Agent 何时召回或记录，ReMe 服务负责持久化、索引和整理。
+Hermes memory-provider plugin 连接独立管理的 ReMe HTTP 服务。它在每次模型调用前召回相关记忆，并在不阻塞主对话的前提下通过 `auto_memory` 记录已完成的 turn。
 
 ### 1. 启动 ReMe
 
-保持默认 HTTP 服务运行：
+需要相互隔离的 Hermes profile 应分别使用独立 workspace 和端点：
 
 ```bash
-reme start
+reme start \
+  workspace_dir="$HOME/.reme-hermes-default" \
+  service.backend=http \
+  service.host=127.0.0.1 \
+  service.port=2333
 ```
 
-对话提炼和长期整合需要配置[快速开始](/reme/latest/zh/quickstart#5-按需启用记忆演化)中的 LLM 环境。
+BM25 召回不需要 embedding，但自动记录需要可用的 LLM 配置。
 
-### 2. 安装 ReMe Skill
+### 2. 安装并配置 Plugin
 
-将仓库中的完整 [`skills/reme_memory/`](https://github.com/agentscope-ai/ReMe/tree/main/skills/reme_memory) 目录安装到 QwenPaw 的 skill 位置，确保 `SKILL.md` 和行为规则一起保留。
+```bash
+hermes plugins install agentscope-ai/ReMe/plugins/hermes_agent
+hermes memory setup
+```
 
-加载后，QwenPaw 应遵循以下规则：
+选择 `reme`，确认 HTTP 端点，再运行 `hermes memory status`。配置保存在 `$HERMES_HOME/reme.json`。同一个 ReMe workspace 会共享召回记忆；不应共享上下文的 profile 必须分开使用 workspace 和端点。
 
-- 回答过去对话、偏好、决定或项目历史前，先搜索并读取；
-- 只用 `auto_memory` 记录具有长期价值的信息，不保存每轮对话；
-- 写入敏感信息前取得用户明确同意；
-- 由自身的会话生命周期提供稳定的 `session_id`。
+### 3. 理解失败行为
 
-<Note>
-`skills/qwenpaw_memory` 会直接维护 `MEMORY.md` 和 `memory/*.md`，不会调用 ReMe。接入 ReMe 时应使用 `skills/reme_memory`。
-</Note>
+召回在模型调用前使用独立的短超时；已完成的 turn 排队交给串行后台 writer，关闭时会获得有界的排空时间。健康检查、检索和记录使用相互独立的冷却，单条路径失败不会无必要地禁用其他路径。配置字段和生命周期详见 [Hermes plugin README](https://github.com/agentscope-ai/ReMe/blob/main/plugins/hermes_agent/README.md)。
 
-### 3. 验证召回与记录
+## QwenPaw
+
+QwenPaw 的推荐路径是通过 Python API 在进程内嵌入 ReMe，以复用宿主的应用生命周期和模型配置，同时保持本地文件化记忆。按 [Python SDK 指南](/reme/latest/zh/integration/python-sdk)接入，并确保每个 workspace 只有一个运行时所有者。
+
+### 验证召回与记录
 
 先在终端写入验证记忆：
 
@@ -142,6 +150,12 @@ reme write \
   content="用户偏好：解释技术问题时先给结论。"
 ```
 
-然后让 QwenPaw 回答“我偏好怎样的技术解释？”。确认它先搜索 ReMe，并读取刚写入的文件。
+然后让 QwenPaw 回答“我偏好怎样的技术解释？”。确认进程内接入先搜索 ReMe，并读取刚写入的文件。
 
-再提供一条具有长期价值的信息，结束会话后搜索相关关键词。如果当前 QwenPaw 版本没有会话结束 hook，可以由应用层显式调用 `auto_memory`，或先仅启用召回；不要自行补全缺失的消息历史。
+再提供一条具有长期价值的信息，结束会话后搜索相关关键词。宿主必须提供稳定的 session ID 和真实消息历史，不要自行补全缺失的对话内容。
+
+## OpenClaw、Codex 与其他可执行 CLI 的 Agent
+
+将完整的 [`skills/reme_memory/`](https://github.com/agentscope-ai/ReMe/tree/main/skills/reme_memory) 目录安装到宿主 Skill 位置，并保持 ReMe HTTP 服务运行。Skill 通过 CLI 搜索、读取、遍历和记录记忆。`read` 只接受 Markdown；其他文本结果应先用 `reme stat` 检查大小，再使用 `reme load`。
+
+Skill 本身不提供自动记录。请将 `auto_memory` 连接到显式的宿主 session 或 turn hook，传入稳定 `session_id`，并只提供真实对话消息。ReMe 在持久化 transcript 时会省略召回的 tool result 和 base64 数据，避免把检索内容或二进制数据当作会话来源。

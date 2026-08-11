@@ -32,7 +32,9 @@ reme start
 默认 workspace 是启动目录下的 `.reme/`，服务监听 `127.0.0.1:2333`。另开一个终端检查状态：
 
 ```bash
+reme version
 reme health_check
+reme help
 ```
 
 端口冲突时可以改用：
@@ -40,6 +42,8 @@ reme health_check
 ```bash
 reme start service.port=8181
 ```
+
+安装包包含 Web 构建产物时，打开 [http://127.0.0.1:2333/](http://127.0.0.1:2333/) 即可使用 **ReMe Studio**。Studio 可以浏览、编辑和搜索 workspace，与只读 workspace agent 对话，并查看 digest wikilink 图。通过 `service.web_enabled=false` 可以关闭；也可用 `service.web_static_dir` / `REME_WEB_STATIC_DIR` 指定自定义构建。即使找不到 Web 构建产物，Job API 仍会正常启动。
 
 ## 3. 写入第一条记忆
 
@@ -59,11 +63,17 @@ ReMe 会补全 `.md` 后缀，并在 `.reme/digest/wiki/quick-start-demo.md` 中
 
 ## 4. 检索并读取
 
-后台索引通常会自动发现新文件。如果没有立即命中，等待片刻或运行一次 `reme reindex`。
+后台索引会实时监听 `daily/` 和 `digest/` 下的 Markdown，因此通常会自动发现新文件。如果没有立即命中，等待片刻或运行一次 `reme reindex`；完整重建还会扫描 `resource/` 和 JSONL。
 
 ```bash
 reme search query="Agent 记忆 Markdown" limit=5
 reme read path=digest/wiki/quick-start-demo.md
+```
+
+搜索还支持闭区间日期过滤：
+
+```bash
+reme search query="Agent 记忆 Markdown" start_date=2026-08-01 end_date=2026-08-12 limit=5
 ```
 
 同时直接打开 workspace 中的文件。命令结果和磁盘文件一致，说明最小闭环已经跑通。
@@ -73,7 +83,8 @@ reme read path=digest/wiki/quick-start-demo.md
 ```text
 .reme/
 ├── metadata/    索引、图谱和运行状态
-├── session/     原始会话
+├── session/     来源对话
+├── mem_session/ Agent wrapper 生成的 session 和配置
 ├── resource/    原始资料
 ├── daily/       当日整理结果
 └── digest/      长期记忆
