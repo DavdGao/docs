@@ -17,14 +17,15 @@ Workspace 使用以下顶层目录：
 
 | 目录 | 语义 | 用户是否应编辑 |
 |---|---|---|
-| `session/` | 原始对话和 Agent session | 通常只读 |
+| `session/` | 记忆流程使用的来源对话 | 通常只读 |
+| `mem_session/` | Agent wrapper 生成的 session 和配置 | 不要当作用户记忆 |
 | `resource/` | 导入的原始资料 | 可以添加、替换或删除 |
-| `daily/` | 按日期组织的当日记录和浅加工结果 | 可以检查和修正 |
+| `daily/` | 由对话和资料生成的主题卡片与日期索引 | 可以检查和修正 |
 | `digest/` | 可长期复用的个人事实、流程与知识 | 主要人工编辑入口 |
 | `metadata/` | 索引、图谱、catalog 等派生状态 | 不应手工编辑 |
 
 <Note>
-`metadata/` 可以从用户文件重建，不应被当作唯一记忆来源。备份时至少保留 `session/`、`resource/`、`daily/` 和 `digest/`。
+`metadata/` 可以从用户文件重建，不应被当作唯一记忆来源。备份时至少保留 `session/`、`resource/`、`daily/` 和 `digest/`；`mem_session/` 是生成的运行态，不是持久用户记忆。
 </Note>
 
 ## Markdown 记忆
@@ -39,12 +40,13 @@ description: 提交代码前的检查约定
 
 # Build checks
 
-提交前运行 pytest。相关背景见 [[daily/2026-07-13/session-42.md]]。
+提交前运行 pytest。该约定记录在 [[daily/2026-07-13/build-checks.md]] 中。
 ```
 
 - 路径始终相对于 workspace；读写命令只接受 workspace 内路径。
 - `.md` 可以省略，ReMe 会在需要时补全。
 - `[[path/to/file.md]]` 表示 workspace 内的 wikilink。
+- Wikilink 按 workspace 相对字面路径解析；ReMe 不会自动推断 `.md`、按文件名搜索或解析文件夹笔记。
 - frontmatter 的 `name` 和 `description` 是常用摘要字段；其他元数据是否稳定，应以 schema 和实际写入工具为准。
 - 移动或删除带链接的文件时优先使用 ReMe 的 `move` / `delete` action，以便检查相关链接。
 
@@ -72,6 +74,8 @@ reme start config=/path/to/config.yaml service.port=8181
 | `jobs` | 后台、定时和公开 action |
 | `components` | LLM、embedding、存储和图谱实现 |
 
+Embedding 检索默认关闭。启用时需同时配置 `components.as_embedding` 和 `components.embedding_store`，再将 `components.file_store.default.embedding_store` 设为 `default`。向量维度必须与所选模型一致。
+
 字符串中的 `${VAR}` 和 `${VAR:-default}` 会从环境变量展开。包含密钥的配置和 `.env` 不应提交到版本库。
 
 权威配置来源：
@@ -94,9 +98,17 @@ reme <action> key=value nested.key=value
 reme help          # 当前服务公开的 action
 reme version       # 版本
 reme health_check  # 组件状态
+reme status        # 组件内存估算和进程 RSS
 reme find_reme     # 定位运行中的 ReMe 进程
 reme reindex       # 清理并重建文件索引
+reme traverse      # 查看 wikilink 邻域
+reme graph_snapshot # 返回以分类为根的 digest 图
+reme chat          # 与只读 workspace agent 流式对话，需要 LLM
 ```
+
+`reme search` 支持 `start_date` 和 `end_date` 两个闭区间 `YYYY-MM-DD` 过滤参数。实时 watcher 索引 `daily/` 和 `digest/` 下的 Markdown；`reme reindex` 还会扫描 `resource/` 和 JSONL。`reme read` 只读 Markdown；对其他文本结果，先用 `reme stat` 检查大小，再用会返回完整文件的 `reme load`。
+
+Auto Resource 会监听直接放在 `resource/` 或 `resource/YYYY-MM-DD/` 下的 `md`、`txt`、`json`、`jsonl`、`csv`、`yaml` 和 `html` 文件。Auto Memory 将来源消息保存到 `session/dialog/`，但会从 transcript 中排除召回的 tool result 和 base64 数据。生成的 daily 文件名来自经过校验的内容名称；`session_id`、`source_conversation` 和 `source_resource` 等来源字段才是稳定查询标识。
 
 `start` 之外的 action 会连接正在运行的服务。运行时 `reme help` 和 `reme/config/default.yaml` 是 action 与参数的权威清单。
 
@@ -104,6 +116,7 @@ reme reindex       # 清理并重建文件索引
 
 默认 HTTP 服务将公开 job 暴露为 `POST /{action}`。服务运行后访问：
 
+- `/`：当 Web 构建可用时打开 ReMe Studio；
 - `/docs`：交互式 OpenAPI 页面；
 - `/openapi.json`：机器可读 schema。
 
@@ -113,7 +126,7 @@ MCP 服务通过以下方式启动：
 reme start service.backend=mcp service.transport=streamable-http
 ```
 
-默认 MCP URL 为 `http://127.0.0.1:2333/mcp`。工具清单由 MCP 客户端在连接时自动发现。
+默认 MCP URL 为 `http://127.0.0.1:2333/mcp`。工具清单由 MCP 客户端在连接时自动发现。`chat` 等流式 job 不会暴露为 MCP tool。
 
 ## 兼容性与变更
 

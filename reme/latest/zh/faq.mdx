@@ -19,7 +19,7 @@ reme version
 
 ### 记忆存在哪里？
 
-默认在启动目录的 `.reme/`。用 `workspace_dir=` 可以指定其他位置。记忆主体是普通文件，可以用 git 或文件同步工具备份；`metadata/` 是可重建的派生状态。
+默认在启动目录的 `.reme/`。用 `workspace_dir=` 可以指定其他位置。持久记忆是普通文件，可以用 git 或文件同步工具备份；`metadata/` 是可重建的派生状态，`mem_session/` 保存 Agent wrapper 生成的运行态。
 
 ### 可以直接编辑记忆吗？
 
@@ -87,11 +87,15 @@ reme reindex
 确认：
 
 1. ReMe 服务正在运行；
-2. 文件位于 `daily/`、`digest/` 或 `resource/`；
-3. 文件类型在 watcher 支持范围内；
+2. Markdown 记忆位于 `daily/` 或 `digest/`；
+3. `resource/` 下的来源文件是 `md`、`txt`、`json`、`jsonl`、`csv`、`yaml` 或 `html`，且 Auto Resource 已生成对应 daily 卡片；
 4. 写入后已给后台 watcher 短暂处理时间。
 
-必要时运行 `reme reindex`。若直接修改了服务未监听的文件，索引不会自动更新。
+必要时运行 `reme reindex`。完整重建还会扫描 `resource/` 和 JSONL；实时索引 watcher 则特意只处理 `daily/` 和 `digest/` 下的 Markdown。
+
+### ReMe Studio 无法访问
+
+只有找到 Web 构建产物时，HTTP 服务根路径才会提供 Studio；即使没有 Studio，Job API 仍可用。请确认当前是 HTTP backend，并安装包含 Web 构建的包，或通过 `service.web_static_dir` / `REME_WEB_STATIC_DIR` 指定包含 `index.html` 的目录。
 
 ### Claude Code 会话没有自动记录
 

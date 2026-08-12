@@ -7,7 +7,7 @@ ReMe is not defined by one retrieval algorithm or pipeline. It starts from a set
 
 ## Memory as File
 
-Long-term memory should not exist only as internal database rows or temporary prompt text. ReMe stores memory as local files that users can read, search, edit, move, delete, back up, and version with ordinary tools.
+Long-term memory should not exist only as internal database rows or temporary prompt text. ReMe stores source material and readable memory as local files that users can read, search, edit, move, delete, back up, and version with ordinary tools.
 
 Files do not exclude indexes. ReMe can build keyword, embedding, and link indexes over Markdown, but those indexes are rebuildable derived state. User-owned files remain the source of truth.
 
@@ -21,7 +21,7 @@ This makes memory:
 
 Saving every message is not the same as remembering. Raw conversations are valuable evidence but poor durable understanding; endlessly appended summaries become repetitive, contradictory, and stale.
 
-ReMe separates sources, daily notes, and durable memory. It preserves what happened, then refines facts, preferences, procedures, and knowledge worth reusing. New experience can extend, merge, or correct older understanding.
+ReMe separates source conversations and resources, topic-named daily cards, and durable digest memory. Stable provenance fields such as `session_id`, `source_conversation`, and `source_resource` preserve identity even when generated filenames describe the content. New experience can extend, merge, corroborate, or correct older understanding.
 
 A memory system therefore needs refinement and forgetting as well as writing. Its value comes from helping future action, not from the number of files or tokens stored.
 
@@ -39,6 +39,8 @@ That collaboration requires boundaries:
 ## Connected and Traceable
 
 Isolated fragments rarely explain how a decision formed. Links express both source and related context, allowing an agent to expand a useful hit and a user to verify durable conclusions against original material.
+
+ReMe uses literal workspace-relative wikilinks such as `[[digest/wiki/memory-as-file.md]]`. Search returns bounded incoming and outgoing link metadata instead of loading every neighbor's full text, so the agent can read or traverse only the promising paths.
 
 Traceability does not mean retaining everything. It means keeping enough evidence for important understanding, and allowing memories to change when sources disappear, judgments evolve, or a user asks to forget.
 

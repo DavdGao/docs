@@ -13,7 +13,7 @@ MCP、CLI 和 HTTP 访问同一个 ReMe workspace 与 job。请选择宿主已�
 |---|---|---|
 | MCP | 带有 MCP client 的 Agent 或应用 | 通过共享 MCP 端点发现并调用工具 |
 | CLI | 可以执行 shell 命令的 Agent 与自动化任务 | 向运行中的 ReMe 服务发送命令 |
-| HTTP | 跨语言应用与自定义 client | 向 job 端点发送 JSON 请求 |
+| HTTP | 跨语言应用、自定义 client 和 ReMe Studio | 访问 job 端点和可选 Web UI |
 
 MCP 和 HTTP 是服务协议；CLI 是运行中服务的客户端，通常最适合能够执行 shell 命令的 Agent。
 
@@ -59,6 +59,8 @@ CLI 会检测正在运行的服务配置，也能连接 MCP backend。排查 cli
 reme start
 ```
 
+当 Web 构建可用时，同一地址的 `/` 还会提供 ReMe Studio。Studio 可以浏览、编辑和搜索 workspace，与只读 workspace agent 进行流式对话，并可视化 digest wikilink 图。通过 `service.web_enabled=false` 可以关闭；也可使用 `service.web_static_dir` / `REME_WEB_STATIC_DIR` 指定自定义构建。找不到 Web 产物不会阻止 Job API 启动。
+
 每个已公开 job 对应 `POST /{action}`，请求体使用 JSON：
 
 ```bash
@@ -68,6 +70,10 @@ curl -s http://127.0.0.1:2333/search \
 ```
 
 服务运行后，可通过 `/docs` 或 `/openapi.json` 获取与当前安装版本一致的 schema。不要在 client 代码中复制固定的旧参数表。
+
+<Note>
+HTTP 通过 server-sent events 暴露 `chat` 等流式 job；MCP 当前会跳过流式 job 和后台 job。
+</Note>
 
 ## 下一步
 

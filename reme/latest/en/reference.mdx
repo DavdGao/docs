@@ -17,14 +17,15 @@ The workspace uses the following top-level directories:
 
 | Directory | Meaning | User editing |
 |---|---|---|
-| `session/` | Raw conversations and agent sessions | Usually read-only |
+| `session/` | Source conversations used by memory workflows | Usually read-only |
+| `mem_session/` | Generated agent-wrapper sessions and configuration | Do not treat as user memory |
 | `resource/` | Imported source material | Add, replace, or delete as needed |
-| `daily/` | Date-based notes and lightly refined output | Inspect and correct |
+| `daily/` | Topic-named cards and date indexes produced from conversations and resources | Inspect and correct |
 | `digest/` | Durable personal facts, procedures, and knowledge | Primary manual editing surface |
 | `metadata/` | Derived indexes, graph, and catalogs | Do not edit manually |
 
 <Note>
-`metadata/` can be rebuilt and must not be the only copy of memory. Backups should retain at least `session/`, `resource/`, `daily/`, and `digest/`.
+`metadata/` can be rebuilt and must not be the only copy of memory. Backups should retain at least `session/`, `resource/`, `daily/`, and `digest/`. `mem_session/` contains generated runtime state rather than durable user memory.
 </Note>
 
 ## Markdown Memory
@@ -39,12 +40,13 @@ description: Checks required before submitting code
 
 # Build checks
 
-Run pytest before submitting. Context: [[daily/2026-07-13/session-42.md]].
+Run pytest before submitting. This rule was recorded in [[daily/2026-07-13/build-checks.md]].
 ```
 
 - Paths are workspace-relative and file actions cannot escape the workspace.
 - ReMe can add a missing `.md` suffix where appropriate.
 - `[[path/to/file.md]]` is a workspace wikilink.
+- Wikilinks use literal workspace-relative paths; ReMe does not infer `.md`, search by filename, or resolve folder notes.
 - `name` and `description` are common summary fields. Treat other metadata as stable only when covered by the current schema.
 - Prefer ReMe `move` / `delete` actions for linked files so related links can be checked.
 
@@ -72,6 +74,8 @@ Common top-level groups include:
 | `jobs` | Background, scheduled, and served actions |
 | `components` | LLM, embedding, storage, and graph implementations |
 
+Embedding retrieval is disabled by default. Enable both `components.as_embedding` and `components.embedding_store`, then set `components.file_store.default.embedding_store` to `default`. The configured vector dimension must match the selected model.
+
 `${VAR}` and `${VAR:-default}` in string values expand from the environment. Never commit configuration or `.env` files containing secrets.
 
 Authoritative sources:
@@ -94,9 +98,17 @@ Common entrypoints:
 reme help          # actions served by the current service
 reme version       # installed version
 reme health_check  # component status
+reme status        # component memory estimates and process RSS
 reme find_reme     # locate a running ReMe process
 reme reindex       # clear and rebuild the file index
+reme traverse      # inspect a wikilink neighborhood
+reme graph_snapshot # return the category-rooted digest graph
+reme chat          # stream a read-only workspace-agent conversation; requires an LLM
 ```
+
+`reme search` supports `start_date` and `end_date` as inclusive `YYYY-MM-DD` filters. The live watcher indexes Markdown in `daily/` and `digest/`; `reme reindex` additionally scans `resource/` and JSONL. Use `reme read` for Markdown. For a non-Markdown text result, inspect it with `reme stat` and then `reme load`, because `load` returns the complete file.
+
+Auto Resource watches `md`, `txt`, `json`, `jsonl`, `csv`, `yaml`, and `html` files placed directly under `resource/` or in `resource/YYYY-MM-DD/`. Auto Memory preserves source messages under `session/dialog/` but omits recalled tool results and base64 data from the transcript. Generated daily filenames come from validated content names; provenance fields such as `session_id`, `source_conversation`, and `source_resource` remain the stable lookup identity.
 
 Actions other than `start` connect to the running service. Runtime `reme help` and `reme/config/default.yaml` are the authoritative action and parameter lists.
 
@@ -104,6 +116,7 @@ Actions other than `start` connect to the running service. Runtime `reme help` a
 
 The default HTTP service exposes served jobs as `POST /{action}`. While it is running, use:
 
+- `/` for ReMe Studio when a web build is available;
 - `/docs` for interactive OpenAPI documentation;
 - `/openapi.json` for the machine-readable schema.
 
@@ -113,7 +126,7 @@ Start MCP with:
 reme start service.backend=mcp service.transport=streamable-http
 ```
 
-The default MCP URL is `http://127.0.0.1:2333/mcp`. MCP clients discover the current tool list on connection.
+The default MCP URL is `http://127.0.0.1:2333/mcp`. MCP clients discover the current tool list on connection. Stream jobs such as `chat` are not exposed as MCP tools.
 
 ## Compatibility and Changes
 
