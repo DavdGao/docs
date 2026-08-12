@@ -91,7 +91,8 @@
                           "versions/2.0.7dev/en/building-blocks/workspace/manage-resources",
                           "versions/2.0.7dev/en/building-blocks/workspace/mcp-gateway"
                         ]
-                      }
+                      },
+                      "versions/2.0.7dev/en/building-blocks/console"
                     ]
                   },
                   {
@@ -701,7 +702,8 @@
                           "versions/2.0.7dev/zh/building-blocks/workspace/manage-resources",
                           "versions/2.0.7dev/zh/building-blocks/workspace/mcp-gateway"
                         ]
-                      }
+                      },
+                      "versions/2.0.7dev/zh/building-blocks/console"
                     ]
                   },
                   {
