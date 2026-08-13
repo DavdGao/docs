@@ -106,15 +106,16 @@ agent = Agent(
 )
 ```
 
-**At runtime via suggestions**: when the permission system returns ASK, it auto-generates suggested rules from the current call. Pass accepted rules back in `UserConfirmResultEvent.rules`; the agent adds them to the engine automatically:
+**At runtime via suggestions**: when the permission system returns ASK, it auto-generates suggested rules from the current call. Pass accepted rules back in `ConfirmResult.rules`; the agent adds them to the engine automatically:
 
 ```python
-from agentscope.event import UserConfirmResultEvent
+from agentscope.event import ConfirmResult
 
 # The ASK decision includes suggested_rules generated from the current call.
 # To accept a suggestion, include it in the result event:
-result = UserConfirmResultEvent(
+result = ConfirmResult(
     confirmed=True,
+    tool_call=tool_call_block,  # The tool call being confirmed
     rules=[suggested_rule],  # accepted rules are persisted to the engine
 )
 ```
