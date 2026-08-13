@@ -106,15 +106,16 @@ agent = Agent(
 )
 ```
 
-**运行时通过建议规则**：当权限系统返回 ASK 时，会基于本次调用自动生成建议规则。把已接受的规则附在 `UserConfirmResultEvent.rules` 中回传，智能体会自动写入引擎：
+**运行时通过建议规则**：当权限系统返回 ASK 时，会基于本次调用自动生成建议规则。把已接受的规则附在 `ConfirmResult.rules` 中回传，智能体会自动写入引擎：
 
 ```python
-from agentscope.event import UserConfirmResultEvent
+from agentscope.event import ConfirmResult
 
 # ASK 决策中包含基于本次调用生成的 suggested_rules。
 # 接受建议时，把它放入结果事件即可：
-result = UserConfirmResultEvent(
+result = ConfirmResult(
     confirmed=True,
+    tool_call=tool_call_block,  # 被确认的原始工具调用对象
     rules=[suggested_rule],  # 已接受的规则会被持久化进引擎
 )
 ```
