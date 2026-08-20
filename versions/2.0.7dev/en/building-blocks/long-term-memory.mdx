@@ -225,7 +225,7 @@ pip install "agentscope[reme]"
 
 ### Quick start
 
-You can inject AgentScope chat and embedding models into ReMe. The chat model drives `auto_memory` extraction; providing an embedding model automatically enables vector search with the default configuration. Replace `my_chat_model` and `my_embedding_model` below with your model instances:
+You can inject AgentScope chat and embedding models into ReMe. The chat model drives `auto_memory` extraction; providing an embedding model automatically enables vector search in AgentScope's minimal embedded configuration. Replace `my_chat_model` and `my_embedding_model` below with your model instances:
 
 ```python
 import asyncio
@@ -269,7 +269,7 @@ async def main():
 asyncio.run(main())
 ```
 
-Without injected models, ReMe creates its LLM and embedding backends from its own configuration and credentials. The default `default` configuration uses BM25 keyword search for its file store. For semantic search, pass an `embedding_model`. Its vector dimensions must match the vector store configured for ReMe; the example uses a 1024-dimensional DashScope embedding model.
+`ReMeMiddleware` always builds an AgentScope-owned minimal ReMe configuration. It includes conversation write-back, nightly and manual dream consolidation from daily cards into digest memory, and search across both daily and digest memory, without loading ReMe's unrelated standalone jobs. Without an injected chat model, its LLM component reads ReMe's `LLM_*` environment variables. Search stays BM25-only unless an `embedding_model` is provided; when present, the middleware creates a matching vector store from the model's dimensions.
 
 ### Control modes
 
@@ -296,9 +296,8 @@ After `auto_memory` writes a card, ReMe still needs to index it before it become
 | Location | Parameter | Default | Description |
 |----------|-----------|---------|-------------|
 | `ReMeMiddleware(...)` | `workspace_dir` | `".reme"` | Directory for ReMe memory cards and indexes. |
-| `ReMeMiddleware(...)` | `config` | `"default"` | ReMe configuration name or configuration file path. |
-| `Parameters` | `chat_model` | `None` | LLM injected into ReMe for `auto_memory`; when omitted, ReMe uses its own configured credentials. |
-| `Parameters` | `embedding_model` | `None` | Embedding model injected into ReMe and enables the vector store; when omitted, ReMe uses its own embedding backend and the default configuration remains BM25-based. |
+| `Parameters` | `chat_model` | `None` | LLM injected into ReMe for `auto_memory`; when omitted, the minimal configuration uses ReMe's `LLM_*` environment variables. |
+| `Parameters` | `embedding_model` | `None` | Embedding model injected into ReMe; providing one creates and enables a dimension-matched vector store, while omitting it keeps search BM25-only. |
 | `Parameters` | `mode` | `"both"` | `static_control`, `agent_control`, or `both`. |
 | `Parameters` | `top_k` | `5` | Maximum memories returned by each automatic search and the default `limit` for `memory_search`. |
 
