@@ -225,7 +225,7 @@ pip install "agentscope[reme]"
 
 ### 快速开始
 
-可以把 AgentScope 的聊天模型和 embedding 模型注入 ReMe。聊天模型用于 `auto_memory` 的记忆抽取；传入 embedding 模型后，默认配置会自动启用向量检索。下面的 `my_chat_model`、`my_embedding_model` 替换为你使用的模型实例：
+可以把 AgentScope 的聊天模型和 embedding 模型注入 ReMe。聊天模型用于 `auto_memory` 的记忆抽取；传入 embedding 模型后，AgentScope 的最小化内置配置会自动启用向量检索。下面的 `my_chat_model`、`my_embedding_model` 替换为你使用的模型实例：
 
 ```python
 import asyncio
@@ -268,7 +268,7 @@ async def main():
 asyncio.run(main())
 ```
 
-如果不注入模型，ReMe 会按照自己的配置和凭据创建 LLM、embedding 后端；默认 `default` 配置的文件存储是 BM25 关键词检索。需要语义检索时，建议传入 `embedding_model`。embedding 模型的向量维度应与 ReMe 配置的向量存储一致；例如示例使用 `1024` 维的 DashScope embedding 模型。
+`ReMeMiddleware` 始终构建一份由 AgentScope 维护的最小化 ReMe 配置。它包含对话写回、将 daily 记忆整理为 digest 的定时与手动 dream 任务，以及覆盖 daily 和 digest 的检索，但不会加载与中间件无关的 ReMe 独立任务。不注入聊天模型时，LLM 组件读取 ReMe 的 `LLM_*` 环境变量；不传入 `embedding_model` 时保持 BM25 关键词检索，传入后则根据模型的实际向量维度创建并启用向量存储。
 
 ### 控制模式
 
@@ -295,9 +295,8 @@ asyncio.run(main())
 | 位置 | 参数 | 默认值 | 说明 |
 |------|------|--------|------|
 | `ReMeMiddleware(...)` | `workspace_dir` | `".reme"` | ReMe 记忆卡片和索引所在的工作区目录。 |
-| `ReMeMiddleware(...)` | `config` | `"default"` | ReMe 配置名称或配置文件路径。 |
-| `Parameters` | `chat_model` | `None` | 注入 ReMe 的 LLM，用于 `auto_memory`；为空时使用 ReMe 自己配置的凭据。 |
-| `Parameters` | `embedding_model` | `None` | 注入 embedding 模型并自动启用向量存储；为空时使用 ReMe 自己的 embedding 后端，默认配置保持 BM25 检索。 |
+| `Parameters` | `chat_model` | `None` | 注入 ReMe 的 LLM，用于 `auto_memory`；为空时最小化配置使用 ReMe 的 `LLM_*` 环境变量。 |
+| `Parameters` | `embedding_model` | `None` | 注入 ReMe 的 embedding 模型；传入时创建并启用维度匹配的向量存储，为空时保持 BM25 检索。 |
 | `Parameters` | `mode` | `"both"` | `static_control`、`agent_control` 或 `both`。 |
 | `Parameters` | `top_k` | `5` | 每次自动检索最多返回的记忆数，也是 `memory_search` 的默认 `limit`。 |
 
