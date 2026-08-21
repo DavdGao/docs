@@ -387,6 +387,58 @@ class FullObservabilityMiddleware(MiddlewareBase):
         return []
 ```
 
+### 控制智能体流程
+
+`on_reply` 不只能观察事件，还可以通过「转发、替换或吞掉」事件改变整个 reply 的流程。其中，如果中间件收到 `ReplyEndEvent` 却不再 `yield`，Agent 会继续下一轮推理与行动；只有结束事件穿过整条中间件链时，reply 才真正结束。
+
+下面的中间件在 Agent 第一次准备结束时追加一条检查指令，并强制再执行一轮：
+
+```python
+from collections.abc import AsyncGenerator, Callable
+
+from agentscope.agent import Agent
+from agentscope.event import AgentEvent, ReplyEndEvent
+from agentscope.message import HintBlock, Msg
+from agentscope.middleware import MiddlewareBase
+from agentscope.types import ReplyFinishedReason
+
+
+class ContinueOnceMiddleware(MiddlewareBase):
+    async def on_reply(
+        self,
+        agent: Agent,
+        input_kwargs: dict,
+        next_handler: Callable[..., AsyncGenerator[AgentEvent | Msg, None]],
+    ) -> AsyncGenerator[AgentEvent | Msg, None]:
+        continued = False
+        async for item in next_handler(**input_kwargs):
+            can_continue = (
+                isinstance(item, ReplyEndEvent)
+                and item.finished_reason
+                in {
+                    ReplyFinishedReason.COMPLETED,
+                    ReplyFinishedReason.EXCEED_MAX_ITERS,
+                }
+                and not continued
+            )
+            if can_continue:
+                continued = True
+                agent.state.cur_iter = min(
+                    agent.state.cur_iter,
+                    agent.react_config.max_iters - 1,
+                )
+                agent.state.append_context(
+                    agent.name,
+                    [HintBlock(hint="结束前请再检查一遍结果。")],
+                )
+                continue  # 吞掉 ReplyEndEvent，进入下一轮
+            yield item
+```
+
+<Warning>
+吞掉 `EXCEED_MAX_ITERS` 前必须释放可用迭代次数（如上例调整 `cur_iter`），否则 Agent 无法产生新进展。`INTERRUPTED` 结束事件不能用该机制继续，应原样向外传递。实际中还应设置明确的重试上限，避免中间件导致无限 reply 循环。
+</Warning>
+
 ### 执行顺序
 
 洋葱型 hook（`on_reply`、`on_reasoning`、`on_acting`、`on_model_call`）—— **列表中第一个中间件处于最外层**：

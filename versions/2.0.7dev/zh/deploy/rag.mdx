@@ -66,7 +66,7 @@ description: "一键式启动的多租户、分布式 RAG 服务"
             PPTParser(),
             ImageParser(),
         ],
-        knowledge_chunker=ApproxTokenChunker(chunk_size=512, overlap=50),
+        knowledge_chunkers=[ApproxTokenChunker],
         blob_store=LocalBlobStore(root_dir="/data/blobs"),
     )
 
@@ -112,7 +112,7 @@ description: "一键式启动的多租户、分布式 RAG 服务"
             PPTParser(),
             ImageParser(),
         ],
-        knowledge_chunker=ApproxTokenChunker(chunk_size=512, overlap=50),
+        knowledge_chunkers=[ApproxTokenChunker],
         blob_store=S3BlobStore(bucket="my-rag-bucket"),
     )
 
@@ -129,8 +129,8 @@ description: "一键式启动的多租户、分布式 RAG 服务"
     <ParamField path="knowledge_parsers" type="list[ParserBase] | dict[str, ParserBase] | None" default="[TextParser()]">
       注册到上传链路的 parser 列表，按各 parser 声明的 `supported_media_types` 路由上传文件。`list` 形式下，后注册的同类型 parser 覆盖前者（覆盖会打 warning）；`dict` 形式 `media_type → parser` 表示显式路由（适合同一 parser 绑定多个类型或自定义别名）。
     </ParamField>
-    <ParamField path="knowledge_chunker" type="ChunkerBase | None" default="ApproxTokenChunker()">
-      全部知识库共用的切块策略。生产场景按嵌入模型上下文窗口调整 `chunk_size` 与 `overlap`。
+    <ParamField path="knowledge_chunkers" type="list[type[ChunkerBase]] | None" default="[ApproxTokenChunker]">
+      允许用户选择的切块器类。每个知识库保存自己的 `chunker_type` 和经过 `Parameters` Schema 校验的参数，索引 worker 会按该配置重建实例。
     </ParamField>
     <ParamField path="blob_store" type="BlobStoreBase | None" default="LocalBlobStore('./blobs')">
       上传文件落地的二进制存储。本地存储适合单机；分布式部署请用 S3 或自实现的共享后端，因为 worker 必须与 API 共享同一份文件源。
@@ -254,7 +254,7 @@ async def main() -> None:
             PPTParser(),
             ImageParser(),
         ],
-        chunker=ApproxTokenChunker(),
+        chunkers=[ApproxTokenChunker],
         worker_max_concurrency=4,   # 单个 worker 并发处理的文档上限
         consumer_max_batch=32,      # 单次信号最多拉取的任务条数
     )
@@ -302,7 +302,7 @@ def bootstrap() -> dict:
             PPTParser(),
             ImageParser(),
         ],
-        "chunker": ApproxTokenChunker(),
+        "chunkers": [ApproxTokenChunker],
     }
 ```
 
@@ -411,6 +411,7 @@ parser 默认在事件循环线程内运行。如果引入 PDF / Office 等 CPU 
 |------|------|------|
 | 能力发现 | `GET /knowledge_bases/embedding_models` | 列出当前用户的凭证下，与向量库维度策略兼容的嵌入模型 |
 | 能力发现 | `GET /knowledge_bases/supported_content_types` | 列出当前 API 已挂载的解析器支持的 IANA media types 与文件扩展名，前端用作 `<input accept>` |
+| 能力发现 | `GET /knowledge_bases/chunkers` | 列出可选切块器及其 `Parameters` JSON Schema |
 | 能力发现 | `GET /knowledge_bases/middleware/parameters_schema` | 获取 `RAGMiddleware.Parameters` 的 JSON Schema，前端用作动态表单 |
 | 知识库 CRUD | `POST/GET/PATCH/DELETE /knowledge_bases` | 知识库的增查改删；删除会级联清理 collection、文档记录和 blob |
 | 文档管理 | `GET/POST/DELETE /knowledge_bases/{kb_id}/documents` | 列出 / 上传 / 删除文档；上传后立即返回 `pending` |

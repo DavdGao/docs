@@ -15,10 +15,9 @@ description: "在任意后端上创建工作区，并接入智能体"
 
     ```
     {workdir}/
-    ├── .mcp           # 已注册的 MCP 客户端配置（JSON 数组）
+    ├── .mcp           # 按智能体/会话保存的 MCP 声明
     ├── data/          # 卸载的多模态内容（按 SHA-256 去重）
-    ├── skills/        # 技能子目录，各含一份 SKILL.md
-    │   └── .skills    # 名称/哈希索引，用于去重
+    ├── skills/        # .seed 模板及按智能体隔离的技能目录
     └── sessions/      # 各会话的 context.jsonl 与工具结果文件
     ```
 
@@ -40,9 +39,9 @@ description: "在任意后端上创建工作区，并接入智能体"
     ```
     {host_workdir}/    # 主机目录，挂载到沙箱内的 /workspace
     ├── .agentscope    # 网关虚拟环境与运行时文件
-    ├── .mcp           # 已注册的 MCP 客户端配置（JSON 数组）
+    ├── .mcp           # 按智能体/会话保存的 MCP 声明
     ├── data/          # 卸载的多模态数据
-    ├── skills/        # 技能子目录，每个含 SKILL.md
+    ├── skills/        # .seed 模板及按智能体隔离的技能目录
     └── sessions/      # 每个会话的 context.jsonl 与工具结果文件
     ```
 
@@ -72,9 +71,9 @@ description: "在任意后端上创建工作区，并接入智能体"
 
     ```
     {workdir}/         # 主机目录，挂载到容器内 /workspace
-    ├── .mcp           # 已注册的 MCP 客户端配置（JSON 数组）
+    ├── .mcp           # 按智能体/会话保存的 MCP 声明
     ├── data/          # 卸载的多模态内容
-    ├── skills/        # 技能子目录，各含一份 SKILL.md
+    ├── skills/        # .seed 模板及按智能体隔离的技能目录
     └── sessions/      # 各会话的 context.jsonl 与工具结果文件
     ```
 
@@ -98,9 +97,9 @@ description: "在任意后端上创建工作区，并接入智能体"
 
     ```
     $workdir/          # 沙箱内部
-    ├── .mcp           # 已注册的 MCP 客户端配置（JSON 数组）
+    ├── .mcp           # 按智能体/会话保存的 MCP 声明
     ├── data/          # 卸载的多模态内容
-    ├── skills/        # 技能子目录，各含一份 SKILL.md
+    ├── skills/        # .seed 模板及按智能体隔离的技能目录
     └── sessions/      # 各会话的 context.jsonl 与工具结果文件
     ```
 
@@ -123,9 +122,9 @@ description: "在任意后端上创建工作区，并接入智能体"
 
     ```
     $workdir/          # 沙箱内部
-    ├── .mcp           # 已注册的 MCP 客户端配置（JSON 数组）
+    ├── .mcp           # 按智能体/会话保存的 MCP 声明
     ├── data/          # 卸载的多模态内容
-    ├── skills/        # 技能子目录，各含一份 SKILL.md
+    ├── skills/        # .seed 模板及按智能体隔离的技能目录
     └── sessions/      # 各会话的 context.jsonl 与工具结果文件
     ```
 
@@ -149,9 +148,9 @@ description: "在任意后端上创建工作区，并接入智能体"
 
     ```
     /workspace/        # Pod 内部，由 PVC 支撑
-    ├── .mcp           # 已注册的 MCP 客户端配置（JSON 数组）
+    ├── .mcp           # 按智能体/会话保存的 MCP 声明
     ├── data/          # 卸载的多模态内容
-    ├── skills/        # 技能子目录，各含一份 SKILL.md
+    ├── skills/        # .seed 模板及按智能体隔离的技能目录
     └── sessions/      # 各会话的 context.jsonl 与工具结果文件
     ```
 
@@ -175,9 +174,9 @@ description: "在任意后端上创建工作区，并接入智能体"
 
     ```
     /workspace/        # 沙箱内部（SANDBOX_WORKDIR）
-    ├── .mcp           # 已注册的 MCP 客户端配置（JSON 数组）
+    ├── .mcp           # 按智能体/会话保存的 MCP 声明
     ├── data/          # 卸载的多模态内容
-    ├── skills/        # 技能子目录，各含一份 SKILL.md
+    ├── skills/        # .seed 模板及按智能体隔离的技能目录
     └── sessions/      # 各会话的 context.jsonl 与工具结果文件
     ```
 
@@ -202,7 +201,7 @@ description: "在任意后端上创建工作区，并接入智能体"
 </Tabs>
 
 <Note>
-`default_mcps` 与 `skill_paths` 是种子输入：仅在首次 `initialize()` 时填充全新的工作区。重启后工作区从持久化的 `.mcp` 文件恢复 MCP 列表，重复传入种子不会产生效果。
+`default_mcps` 与 `skill_paths` 是种子输入，但不会让资源在共享工作区内混用。每个智能体/会话在首次访问 MCP 时获得独立客户端实例；每个智能体在首次访问技能时，从 `skills/.seed` 复制出自己的技能分区。后续添加或删除只影响对应的智能体/会话。
 </Note>
 
 ## 集成智能体
@@ -217,14 +216,20 @@ from agentscope.workspace import LocalWorkspace
 workspace = LocalWorkspace(workdir="./my-workspace")
 await workspace.initialize()
 
+agent_id = "coder"
+session_id = "session-1"
+
 agent = Agent(
     name="coder",
     system_prompt="你是一个编程助手。",
     model=model,
     toolkit=Toolkit(
         tools=await workspace.list_tools(),
-        mcps=await workspace.list_mcps(),
-        skills_or_loaders=await workspace.list_skills(),
+        mcps=await workspace.list_mcps(
+            agent_id=agent_id,
+            session_id=session_id,
+        ),
+        skills_or_loaders=await workspace.list_skills(agent_id=agent_id),
     ),
     offloader=workspace,
 )
@@ -243,8 +248,11 @@ agent = Agent(
 ```python
 from agentscope.tool import Toolkit, ToolGroup
 
-mcps = await workspace.list_mcps()
-skills = await workspace.list_skills()
+mcps = await workspace.list_mcps(
+    agent_id=agent_id,
+    session_id=session_id,
+)
+skills = await workspace.list_skills(agent_id=agent_id)
 
 toolkit = Toolkit(
     tools=await workspace.list_tools(),         # 始终激活（basic 组）
