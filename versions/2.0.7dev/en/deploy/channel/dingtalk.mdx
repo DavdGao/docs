@@ -10,7 +10,7 @@ The DingTalk channel connects over the official Stream mode long connection, so 
 - **Multimodal input**: receive images, files, voice, video, and rich-text messages from users and pass them to the agent;
 - **Outbound sending**: the agent can look up the directory and known chats, then send messages, images, and files to users or groups outside the current conversation.
 
-Connecting takes three steps: create an app on the [DingTalk Open Platform](https://open.dingtalk.com/) and get its credentials, start an agent service to host the channel, then add the DingTalk channel in the management UI. Both card templates already have defaults, so prepare one only to customise how a card looks.
+Connecting takes three steps: create an app on the [DingTalk Open Platform](https://open.dingtalk.com/) and get its credentials, start an agent service to host the channel, then add the DingTalk channel in the management UI. No card template needs preparing; the channel ships defaults.
 
 ## Prerequisites
 
@@ -45,47 +45,6 @@ Create and configure the enterprise internal app and its robot on the [DingTalk 
   </Step>
 </Steps>
 
-## Card Templates
-
-DingTalk interactive cards must be built first in the Card Platform; at runtime the channel only fills in the template variables. Both templates the channel uses default to a template DingTalk publishes, so **a channel works without configuring either**: the approval card gets its title, body, and two buttons laid out at send time, and streaming replies write into the public AI card's Markdown variable.
-
-To customise how a card looks (add a tag, recolour the buttons, rearrange the layout), build a template in the [Card Platform](https://open-dev.dingtalk.com/fe/card) and put its ID in the channel config. No channel code changes.
-
-### Customising the Approval Card
-
-The channel fills in these variables when it delivers an approval card. Bind whichever ones the template shows:
-
-| Variable | Content | Example |
-|---|---|---|
-| `title` | Which agent is asking | `Friday 提交的工具执行` |
-| `name` | The tool awaiting approval | `Bash` |
-| `input` | The tool's arguments, trimmed by bytes when long | `{"command": "ls -la"}` |
-| `created_at` | When the tool call was made | `2026-08-24 18:26:25` |
-| `status` | Card state | `pending` / `approved` / `denied` |
-
-`name`, `input`, and `created_at` come straight off the agent's tool call (the same-named fields of `ToolCallBlock`), so authoring a template needs no vocabulary beyond the call being approved. `status` is the card's own state: `pending` when delivered, then updated to `approved` or `denied` once someone decides. A template can switch its buttons and result text on it.
-
-Give the template an approve button and a deny button, both configured as callback buttons, and carry `action` in their callback parameters (`cardPrivateData.params`):
-
-| Decision | Accepted `action` values |
-|---|---|
-| Approve | `allow`, `approve`, `approved`, `accept`, `agree` |
-| Deny | `deny`, `denied`, `reject` |
-
-A button carries **nothing but `action`**. The channel finds the tool call from the `outTrackId` it pinned when creating the card, and the chat from what the callback itself reports.
-
-<Tip>
-The repository ships a template ready to import: [`assets/dingtalk/tool_approval_card.json`](https://github.com/agentscope-ai/agentscope/blob/main/assets/dingtalk/tool_approval_card.json). Import it when creating a template in the Card Platform, **publish** it, then put its ID in `approval_card_template_id`. Forgetting to publish makes card creation fail with `param.templateUnpublished`.
-</Tip>
-
-<Warning>
-Clearing `approval_card_template_id` turns approval cards off. Tool calls awaiting confirmation then cannot be answered from DingTalk; the channel says so in the chat and the session stays parked.
-</Warning>
-
-### Customising the Streaming Card
-
-Streaming replies need an AI card streaming component in the template. Set its template variable name as `streaming_card_key`; on the default template that name is `content`.
-
 ## Start Agent Service
 
 A channel runs on top of an [agent service](/versions/2.0.7dev/en/deploy/agent-service). Start the service with `create_app` and declare the accepted channel types via `channels`. Channels depend on a message bus (`message_bus`); use `InMemoryMessageBus` for single-machine development, and switch to `RedisMessageBus` for multi-process or multi-node deployment.
@@ -119,9 +78,6 @@ In the management UI (see the sample frontend [`examples/web_ui`](https://github
   <Step title="Fill in the credentials">
     Enter the **Client ID** and **Client Secret** from the previous step into the credential form.
   </Step>
-  <Step title="Fill in the card template IDs">
-    Enter the approval card and streaming card template IDs into the platform config; both may be left empty.
-  </Step>
   <Step title="Configure routing rules">
     Choose which agent handles messages and how sessions are scoped. See [Message Routing](/versions/2.0.7dev/en/deploy/channel/routing) for what the rules mean.
   </Step>
@@ -151,6 +107,47 @@ The DingTalk channel's platform-specific fields:
 <Note>
 When routing matches on `chat_type`, group chats use `group` and DMs use `private`.
 </Note>
+
+## Customising Card Appearance
+
+Tool approval and streaming replies work out of the box: both template IDs default to a template DingTalk publishes, with the approval card's title, body, and two buttons laid out at send time and streaming replies written into the public AI card's Markdown variable. **Connecting DingTalk does not require reading this section.**
+
+What the public templates look like is fixed. Their layout, button colours, and button widths cannot be adjusted, and the card's built-in feedback row cannot be removed. To change any of that, build a template in the [Card Platform](https://open-dev.dingtalk.com/fe/card) and put its ID in the channel config. No channel code changes.
+
+### Approval Card
+
+The channel fills in these variables when it delivers an approval card. Bind whichever ones the template shows:
+
+| Variable | Content | Example |
+|---|---|---|
+| `title` | Which agent is asking | `Friday 提交的工具执行` |
+| `name` | The tool awaiting approval | `Bash` |
+| `input` | The tool's arguments, trimmed by bytes when long | `{"command": "ls -la"}` |
+| `created_at` | When the tool call was made | `2026-08-24 18:26:25` |
+| `status` | Card state | `pending` / `approved` / `denied` |
+
+`name`, `input`, and `created_at` come straight off the agent's tool call (the same-named fields of `ToolCallBlock`), so authoring a template needs no vocabulary beyond the call being approved. `status` is the card's own state: `pending` when delivered, then updated to `approved` or `denied` once someone decides. A template can switch its buttons and result text on it.
+
+Give the template an approve button and a deny button, both configured as callback buttons, and carry `action` in their callback parameters (`cardPrivateData.params`):
+
+| Decision | Accepted `action` values |
+|---|---|
+| Approve | `allow`, `approve`, `approved`, `accept`, `agree` |
+| Deny | `deny`, `denied`, `reject` |
+
+A button carries **nothing but `action`**. The channel finds the tool call from the `outTrackId` it pinned when creating the card, and the chat from what the callback itself reports.
+
+<Tip>
+The repository ships a template ready to import: [`assets/dingtalk/tool_approval_card.json`](https://github.com/agentscope-ai/agentscope/blob/main/assets/dingtalk/tool_approval_card.json). Import it when creating a template in the Card Platform, **publish** it, then put its ID in `approval_card_template_id`. Forgetting to publish makes card creation fail with `param.templateUnpublished`.
+</Tip>
+
+<Warning>
+Clearing `approval_card_template_id` turns approval cards off. Tool calls awaiting confirmation then cannot be answered from DingTalk; the channel says so in the chat and the session stays parked.
+</Warning>
+
+### Streaming Card
+
+Streaming replies need an AI card streaming component in the template. Set its template variable name as `streaming_card_key`; on the default template that name is `content`.
 
 ## Agent Tools
 

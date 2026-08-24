@@ -10,7 +10,7 @@ description: "在钉钉中与智能体服务里的智能体对话。"
 - **多模态输入**：接收用户发来的图片、文件、语音、视频与图文混排消息，交给智能体处理；
 - **主动发送**：智能体可以查询通讯录与已知聊天，把消息、图片、文件发送到当前会话之外的用户或群。
 
-接入分三步：在[钉钉开放平台](https://open.dingtalk.com/)创建应用并拿到凭据，启动一个智能体服务承载渠道，最后在管理界面添加钉钉渠道。卡片模板已有默认值，开发者只在需要自定义外观时才准备。
+接入分三步：在[钉钉开放平台](https://open.dingtalk.com/)创建应用并拿到凭据，启动一个智能体服务承载渠道，最后在管理界面添加钉钉渠道。卡片模板不需要准备，渠道自带默认值。
 
 ## 前置条件
 
@@ -45,47 +45,6 @@ pip install "agentscope[channel]"
   </Step>
 </Steps>
 
-## 卡片模板
-
-钉钉的交互式卡片必须先在卡片平台建好模板，渠道运行时只负责填充模板变量。渠道用到的两个模板都预设为钉钉发布的公共模板，**开发者不配置也能直接使用**：审批卡片由渠道在发送时拼出标题、正文与两个按钮，流式回复写入公共 AI 卡片的 Markdown 变量。
-
-想要自定义外观（例如加标签、换按钮配色、调整排版）时，在[卡片平台](https://open-dev.dingtalk.com/fe/card)另建一个模板，把模板 ID 填进渠道配置即可，渠道代码无需改动。
-
-### 自定义审批卡片
-
-渠道下发审批卡片时填充以下变量，模板按需绑定：
-
-| 变量 | 内容 | 示例 |
-|---|---|---|
-| `title` | 由哪个智能体发起 | `Friday 提交的工具执行` |
-| `name` | 待执行的工具名 | `Bash` |
-| `input` | 工具参数，超长时按字节截断 | `{"command": "ls -la"}` |
-| `created_at` | 工具调用的创建时间 | `2026-08-24 18:26:25` |
-| `status` | 卡片状态 | `pending` / `approved` / `denied` |
-
-`name`、`input`、`created_at` 直接取自智能体的工具调用记录（`ToolCallBlock` 的同名字段），因此模板作者不需要学习一套新的字段名。`status` 是卡片自身的状态：下发时为 `pending`，用户做出决定后渠道把它更新为 `approved` 或 `denied`，模板可以用它控制按钮与结果文案的显示。
-
-模板中放置"同意"与"拒绝"两个回传按钮，在按钮的回传参数（`cardPrivateData.params`）里带上 `action`：
-
-| 决定 | `action` 可用取值 |
-|---|---|
-| 批准 | `allow`、`approve`、`approved`、`accept`、`agree` |
-| 拒绝 | `deny`、`denied`、`reject` |
-
-按钮**只需要回传 `action`**，不必携带任何路由信息。渠道用建卡时指定的 `outTrackId` 定位对应的工具调用，用回调自带的会话信息定位聊天。
-
-<Tip>
-仓库里提供了一份可直接导入的模板：[`assets/dingtalk/tool_approval_card.json`](https://github.com/agentscope-ai/agentscope/blob/main/assets/dingtalk/tool_approval_card.json)。在卡片平台新建模板时导入该文件，**发布**后把模板 ID 填入 `approval_card_template_id`。忘记发布会导致建卡失败并返回 `param.templateUnpublished`。
-</Tip>
-
-<Warning>
-把 `approval_card_template_id` 置空会关闭审批卡片。此时需要确认的工具调用无法在钉钉里得到答复，渠道会在聊天中提示模板为空，会话停在等待确认的状态。
-</Warning>
-
-### 自定义流式卡片
-
-流式回复需要模板中有一个 AI 卡片流式组件，把它的模板变量名填到 `streaming_card_key`。使用默认模板时该变量名为 `content`。
-
 ## 启动智能体服务
 
 渠道运行在[智能体服务](/versions/2.0.7dev/zh/deploy/agent-service)之上。用 `create_app` 启动服务，并用 `channels` 参数声明允许接入的渠道类型。渠道依赖消息总线（`message_bus`），单机开发用 `InMemoryMessageBus` 即可，多进程或多节点部署再换成 `RedisMessageBus`。
@@ -119,9 +78,6 @@ app = create_app(
   <Step title="填入凭据">
     把上一步拿到的 **Client ID** 与 **Client Secret** 填入凭据表单。
   </Step>
-  <Step title="填入卡片模板 ID">
-    把审批卡片与流式卡片的模板 ID 填入平台配置，二者都可留空。
-  </Step>
   <Step title="配置路由规则">
     选择消息交给哪个智能体、会话如何划分。路由规则的含义见[会话路由](/versions/2.0.7dev/zh/deploy/channel/routing)。
   </Step>
@@ -151,6 +107,47 @@ app = create_app(
 <Note>
 路由匹配 `chat_type` 时，群聊的值为 `group`，私聊为 `private`。
 </Note>
+
+## 自定义卡片外观
+
+工具审批与流式回复开箱可用，两个模板 ID 都已预设为钉钉发布的公共模板：审批卡片由渠道在发送时拼出标题、正文与两个按钮，流式回复写入公共 AI 卡片的 Markdown 变量。**接入钉钉不需要读这一节。**
+
+公共模板的外观是固定的：标题与正文的排版、按钮的配色与宽度都无法调整，也去不掉卡片自带的反馈区。要改这些，在[卡片平台](https://open-dev.dingtalk.com/fe/card)建一个自己的模板，把模板 ID 填进渠道配置，渠道代码无需改动。
+
+### 审批卡片
+
+渠道下发审批卡片时填充以下变量，模板按需绑定：
+
+| 变量 | 内容 | 示例 |
+|---|---|---|
+| `title` | 由哪个智能体发起 | `Friday 提交的工具执行` |
+| `name` | 待执行的工具名 | `Bash` |
+| `input` | 工具参数，超长时按字节截断 | `{"command": "ls -la"}` |
+| `created_at` | 工具调用的创建时间 | `2026-08-24 18:26:25` |
+| `status` | 卡片状态 | `pending` / `approved` / `denied` |
+
+`name`、`input`、`created_at` 直接取自智能体的工具调用记录（`ToolCallBlock` 的同名字段），因此模板作者不需要学习一套新的字段名。`status` 是卡片自身的状态：下发时为 `pending`，用户做出决定后渠道把它更新为 `approved` 或 `denied`，模板可以用它控制按钮与结果文案的显示。
+
+模板中放置"同意"与"拒绝"两个回传按钮，在按钮的回传参数（`cardPrivateData.params`）里带上 `action`：
+
+| 决定 | `action` 可用取值 |
+|---|---|
+| 批准 | `allow`、`approve`、`approved`、`accept`、`agree` |
+| 拒绝 | `deny`、`denied`、`reject` |
+
+按钮**只需要回传 `action`**，不必携带任何路由信息。渠道用建卡时指定的 `outTrackId` 定位对应的工具调用，用回调自带的会话信息定位聊天。
+
+<Tip>
+仓库里提供了一份可直接导入的模板：[`assets/dingtalk/tool_approval_card.json`](https://github.com/agentscope-ai/agentscope/blob/main/assets/dingtalk/tool_approval_card.json)。在卡片平台新建模板时导入该文件，**发布**后把模板 ID 填入 `approval_card_template_id`。忘记发布会导致建卡失败并返回 `param.templateUnpublished`。
+</Tip>
+
+<Warning>
+把 `approval_card_template_id` 置空会关闭审批卡片。此时需要确认的工具调用无法在钉钉里得到答复，渠道会在聊天中提示模板为空，会话停在等待确认的状态。
+</Warning>
+
+### 流式卡片
+
+流式回复需要模板中有一个 AI 卡片流式组件，把它的模板变量名填到 `streaming_card_key`。使用默认模板时该变量名为 `content`。
 
 ## 智能体工具
 
