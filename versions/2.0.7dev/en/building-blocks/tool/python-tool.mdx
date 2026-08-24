@@ -133,7 +133,7 @@ The file tools enforce a read-before-write rule: `Write` and `Edit` require the 
 
 | Tool | Operation | Key behavior |
 |------|-----------|--------------|
-| `Read` | Read file contents | Returns content with line numbers; supports offset/limit for large files; results cached in agent state |
+| `Read` | Read file contents | Returns text with line numbers; returns images and PDFs as `DataBlock`s when the model supports them |
 | `Write` | Create or overwrite a file | Fails if the file exists but has not been read first |
 | `Edit` | Replace exact strings in a file | Fails if `old_string` is not found or is not unique (unless `replace_all=True`); requires prior read |
 
@@ -144,6 +144,19 @@ The file tools enforce a read-before-write rule: `Write` and `Edit` require the 
 3. **PASSTHROUGH**: falls through to the permission engine for rule matching
 
 `Read` is read-only and always returns PASSTHROUGH (the engine handles EXPLORE-mode and ACCEPT_EDITS-mode auto-allow via `check_read_only`).
+
+`Read` picks its return format based on the file type:
+
+- Text files are paginated with `offset` / `limit` and returned as `TextBlock`s with line numbers;
+- Image types the model supports are returned as base64 `DataBlock`s;
+- PDFs are returned as `DataBlock`s when the model supports `application/pdf`, otherwise their text is extracted locally. Beyond 10 pages, a range such as `pages="1-5"` is required, and one call reads at most 20 pages.
+
+Pass the input types from the model card straight to `Read` so the tool only returns multimodal content the downstream model can handle:
+
+```python
+read = Read(model_input_types=model_card.input_types)
+result = await read(file_path="/workspace/report.pdf", pages="1-5")
+```
 
 `match_rule()`: all three tools use `fnmatch` glob matching against the `file_path` argument:
 
@@ -278,9 +291,32 @@ toolkit = Toolkit(tools=[FunctionTool(get_weather)])
 | `func` | `Callable` | The Python function to wrap |
 | `name` | `str \| None` | Override the tool name (defaults to `func.__name__`) |
 | `description` | `str \| None` | Override the description (defaults to the docstring) |
+| `input_schema` | `dict \| type[BaseModel] \| None` | Provide a JSON Schema or Pydantic model for the arguments explicitly; inferred from the function annotations when omitted |
 | `is_concurrency_safe` | `bool` | Whether parallel calls are safe (default `True`) |
 | `is_read_only` | `bool` | Whether the function has side effects (default `False`) |
 | `is_state_injected` | `bool` | Whether the agent state is injected as `_agent_state` (default `False`) |
+
+Pass a Pydantic model directly when the arguments need enums, numeric ranges or nested structures:
+
+```python
+from pydantic import BaseModel, Field
+
+
+class WeatherInput(BaseModel):
+    city: str
+    days: int = Field(default=1, ge=1, le=7)
+
+
+def get_forecast(city: str, days: int = 1) -> str:
+    return f"Sunny in {city} for the next {days} day(s)"
+
+
+weather_tool = FunctionTool(get_forecast, input_schema=WeatherInput)
+```
+
+<Note>
+`FunctionTool` also resolves the deferred annotations produced by `from __future__ import annotations`. When automatic inference cannot express the constraints you need, prefer `input_schema`.
+</Note>
 
 <Note>
 Wrapped functions default to `ASK` permission behavior: the user must explicitly allow each call. Subclass `ToolBase` directly when you need custom permission logic.

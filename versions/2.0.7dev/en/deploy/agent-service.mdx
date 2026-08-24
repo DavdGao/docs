@@ -17,7 +17,7 @@ What sets it apart:
 | Capability | Description |
 |------------|-------------|
 | Agent teams | A leader agent spawns worker agents and coordinates them through built-in team tools; see the [Agent Team](/versions/2.0.7dev/en/deploy/agent-team) chapter. |
-| Workspace management | Configurable workspace isolation — `per_agent` (default), `per_session`, or `per_user` — for the agent's filesystem, MCP clients, and skills. |
+| Workspace management | The filesystem is allocated `per_agent` (default), `per_session`, or `per_user`; inside a shared workspace, MCPs stay isolated per agent + session and skills per agent. |
 | Knowledge bases (RAG) | Optional built-in knowledge base service with document ingestion, chunking, embedding, and natural-language search — enabled by passing a `knowledge_base_manager` to `create_app`. |
 | Background task offloading | Long-running tool calls move to background; their results are delivered back through the session's event stream when they finish. |
 | Cron scheduling | Time-based agent execution with stateful or stateless sessions; schedules persist across restarts. |
@@ -195,8 +195,8 @@ uvicorn.run(app, host="0.0.0.0", port=8000)
 <ParamField path="knowledge_parsers" type="list[ParserBase] | dict[str, ParserBase] | None" default="None">
   Parsers registered for knowledge base document uploads. Pass a **list** to have the service route by each parser's `supported_media_types` (later entries override earlier ones for overlapping types, with a warning); pass a **dict** `media_type → parser` for explicit routing. Defaults to `[TextParser()]` when `knowledge_base_manager` is set.
 </ParamField>
-<ParamField path="knowledge_chunker" type="ChunkerBase | None" default="None">
-  The chunker shared across every knowledge base. Defaults to `ApproxTokenChunker()` when `knowledge_base_manager` is set.
+<ParamField path="knowledge_chunkers" type="list[type[ChunkerBase]] | None" default="None">
+  The chunker classes users can choose from when creating a knowledge base. The chunker type and parameters are stored in the knowledge base record, and the indexing worker rebuilds the instance from that schema. Defaults to `[ApproxTokenChunker]` when `knowledge_base_manager` is set.
 </ParamField>
 <ParamField path="blob_store" type="BlobStoreBase | None" default="None">
   Backend that stores uploaded document bytes between the upload endpoint and the indexing worker. Required when `knowledge_base_manager` is set; defaults to `LocalBlobStore(root_dir="./blobs")`. Its lifecycle is managed by the app lifespan.
@@ -261,7 +261,7 @@ Once the server is running, drive it through the resources defined in the resour
     ```
   </Step>
   <Step title="Configure MCPs and skills (optional)">
-    Attach MCP clients and skills to the session's workspace if the agent needs tools beyond its built-ins. Out of the box, every agent already has access to the workspace's built-in tools (filesystem, shell, search, …), task-planning tools, schedule and background-task controls, and — when the session is a team leader or member — the team coordination tools described in [Agent Team](/versions/2.0.7dev/en/deploy/agent-team). Anything you pass via `extra_agent_tools` in `create_app` is merged in alongside.
+    If the agent needs tools beyond its built-ins, configure MCPs for the current session and install skills for the current agent. Out of the box, every agent already has access to the workspace's built-in tools (filesystem, shell, search, …), task-planning tools, schedule and background-task controls, and — when the session is a team leader or member — the team coordination tools described in [Agent Team](/versions/2.0.7dev/en/deploy/agent-team). Anything you pass via `extra_agent_tools` in `create_app` is merged in alongside.
 
     ```http
     POST /workspace/mcp
@@ -346,7 +346,7 @@ flowchart TB
 | **User** | Opaque tenant identifier resolved from the request. The service models no user system of its own; you plug yours in via `get_current_user_id`. |
 | **Credential** | Connection configuration for a model provider — an API key plus provider-specific settings. Reusable across many agents and sessions. |
 | **Agent** | Display name, system prompt, and runtime configuration (context, ReAct loop). The reusable template — identity belongs to the agent, runtime state belongs to the session. |
-| **Workspace** | The agent's runtime environment — working directory, MCP clients, skills, offloaded context. How workspaces map to users / agents / sessions is decided by the workspace manager. |
+| **Workspace** | The agent's runtime environment — working directory, MCP clients, skills, offloaded context. The workspace mapping policy decides how widely the filesystem is shared; inside a workspace, MCPs and skills stay isolated per session and per agent respectively. |
 | **Session** | One ongoing exchange between a user and an agent. Carries the agent state (working memory, in-flight reply, permission context), persisted message transcript, and the LLM configuration the session runs under. |
 | **Schedule** | Fires an agent on a cron expression. Each fire runs inside a session — fresh per execution (stateless) or reused so context accumulates (stateful). Schedules persist across restarts. |
 | **MessageBus** | Redis-backed runtime layer — session locks, replay logs, inbox queues, wakeup signals. The single delivery channel for scheduled fires, team messages, and background-tool completions to reach idle sessions; also what makes multi-process operation possible. |
@@ -373,8 +373,8 @@ The service exposes the resources from the resource model as REST endpoints, plu
 | Models | `GET /model?provider=<name>` | List candidate chat models for a provider, with their declarative `ModelCard` (capabilities and parameter schemas). |
 | TTS models | `GET /tts-model?provider=<name>` | List candidate text-to-speech models for a provider that exposes them. |
 | Schedules | `GET/POST/PATCH/DELETE /schedule`, `GET /schedule/{id}/sessions` | Manage cron-based agent execution, stateful or stateless. |
-| Workspace MCPs | `GET/POST /workspace/mcp`, `DELETE /workspace/mcp/{mcp_name}` | Manage MCP clients attached to the session's workspace. Each response entry includes live tool list and health status. |
-| Workspace skills | `GET/POST /workspace/skill`, `DELETE /workspace/skill/{skill_name}` | Manage skills available in the session's workspace. |
+| Workspace MCPs | `GET/POST /workspace/mcp`, `DELETE /workspace/mcp/{mcp_name}` | Manage the MCP clients of the current agent + session. Each response entry includes live tool list and health status. |
+| Workspace skills | `GET/POST /workspace/skill`, `DELETE /workspace/skill/{skill_name}` | Manage the skill partition of the current agent. |
 | Knowledge bases | `GET/POST/PATCH/DELETE /knowledge_bases` | CRUD for knowledge bases. Enabled only when `knowledge_base_manager` is passed to `create_app`. |
 | KB documents | `GET/POST /knowledge_bases/{id}/documents`, `GET /knowledge_bases/{id}/documents/status`, `DELETE /knowledge_bases/{id}/documents/{doc_id}` | Upload, list, delete documents in a knowledge base and batch-query indexing status. |
 | KB search | `POST /knowledge_bases/{id}/search` | Natural-language search over a knowledge base. |
@@ -472,6 +472,10 @@ Two independent axes are configurable:
 
 - **Workspace backend** — what runtime environment the agent runs in. Built-in implementations include `LocalWorkspace`, `DockerWorkspace`, and `E2BWorkspace`. New backends implement the workspace interface and can wrap container images, sandboxes, or remote VMs.
 - **Isolation strategy** — how workspaces map to users, agents, and sessions. The built-in `LocalWorkspaceManager` keys workspaces by `agent_id`: all sessions of the same agent share one workspace. To switch to per-user or per-session isolation, subclass `WorkspaceManagerBase` and override `get_workspace` with your own keying strategy.
+
+<Note>
+This strategy decides how widely the working directory and offloaded files are shared; it does not turn off the isolation inside a workspace: MCP connections stay separate per `agent_id + session_id`, and skills stay in a private partition per `agent_id`.
+</Note>
 
 ```python
 from agentscope.app.workspace_manager import WorkspaceManagerBase

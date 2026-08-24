@@ -70,6 +70,7 @@ agent = Agent(
         trigger_ratio=0.7,       # compress when 70% of context is used
         reserve_ratio=0.2,       # keep the most recent 20% after compression
         tool_result_limit=1000,  # truncate tool results at 1000 tokens
+        max_image_num=5,         # keep only the 5 most recent images
     ),
 )
 ```
@@ -111,7 +112,7 @@ All configuration enters through the `Agent(...)` constructor. The table below l
 | `offloader` | `Offloader \| None` | `None` | Offloads compressed context and tool results; must implement the `Offloader` protocol |
 | `middlewares` | `list[MiddlewareBase] \| None` | `None` | Applied at reply, reasoning, acting, model call, and system prompt hooks |
 | `model_config` | `ModelConfig` | default | Retry count and fallback model |
-| `context_config` | `ContextConfig` | default | Context compression thresholds and tool result limits |
+| `context_config` | `ContextConfig` | default | Context compression thresholds, image count and tool result limits |
 | `injection_config` | `InjectionConfig` | default | Runtime state injection: time, tasks, and context usage (see [Environment Awareness](/versions/2.0.7dev/en/building-blocks/context/environment-awareness)) |
 | `react_config` | `ReActConfig` | default | Max iterations, structured output grace iterations, and rejection handling |
 

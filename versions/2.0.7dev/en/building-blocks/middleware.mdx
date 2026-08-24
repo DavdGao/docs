@@ -386,6 +386,58 @@ class FullObservabilityMiddleware(MiddlewareBase):
         return []
 ```
 
+### Control The Agent Loop
+
+`on_reply` does more than observe events: forwarding, replacing or swallowing them changes the whole reply flow. In particular, if a middleware receives a `ReplyEndEvent` and does not yield it, the agent runs another reasoning-acting iteration. The reply only ends once the end event travels through the entire middleware chain.
+
+The middleware below appends a review instruction the first time the agent is about to finish, and forces one more iteration:
+
+```python
+from collections.abc import AsyncGenerator, Callable
+
+from agentscope.agent import Agent
+from agentscope.event import AgentEvent, ReplyEndEvent
+from agentscope.message import HintBlock, Msg
+from agentscope.middleware import MiddlewareBase
+from agentscope.types import ReplyFinishedReason
+
+
+class ContinueOnceMiddleware(MiddlewareBase):
+    async def on_reply(
+        self,
+        agent: Agent,
+        input_kwargs: dict,
+        next_handler: Callable[..., AsyncGenerator[AgentEvent | Msg, None]],
+    ) -> AsyncGenerator[AgentEvent | Msg, None]:
+        continued = False
+        async for item in next_handler(**input_kwargs):
+            can_continue = (
+                isinstance(item, ReplyEndEvent)
+                and item.finished_reason
+                in {
+                    ReplyFinishedReason.COMPLETED,
+                    ReplyFinishedReason.EXCEED_MAX_ITERS,
+                }
+                and not continued
+            )
+            if can_continue:
+                continued = True
+                agent.state.cur_iter = min(
+                    agent.state.cur_iter,
+                    agent.react_config.max_iters - 1,
+                )
+                agent.state.append_context(
+                    agent.name,
+                    [HintBlock(hint="Double-check the result before finishing.")],
+                )
+                continue  # Swallow the ReplyEndEvent and run one more iteration
+            yield item
+```
+
+<Warning>
+Before swallowing `EXCEED_MAX_ITERS`, free up at least one iteration (adjust `cur_iter` as above), otherwise the agent cannot make new progress. An `INTERRUPTED` end event must not be continued this way; pass it through unchanged. In practice, also set an explicit retry limit so the middleware cannot spin the reply loop forever.
+</Warning>
+
 ### Execution Order
 
 Onion hooks (`on_reply`, `on_reasoning`, `on_acting`, `on_model_call`) — **the first middleware in the list is the outermost layer**:

@@ -15,10 +15,9 @@ Each backend has its own persistence model and directory layout. Pick the tab ma
 
     ```
     {workdir}/
-    ├── .mcp           # registered MCP client configs (JSON array)
+    ├── .mcp           # MCP declarations stored per agent / session
     ├── data/          # offloaded multimodal payloads (deduped by SHA-256)
-    ├── skills/        # skill subdirectories, each with SKILL.md
-    │   └── .skills    # name/hash index for de-duplication
+    ├── skills/        # the .seed template and per-agent skill directories
     └── sessions/      # per-session context.jsonl and tool-result files
     ```
 
@@ -40,9 +39,9 @@ Each backend has its own persistence model and directory layout. Pick the tab ma
     ```
     {host_workdir}/    # host directory, mounted at /workspace in the sandbox
     ├── .agentscope    # gateway venv and runtime files
-    ├── .mcp           # registered MCP client configs (JSON array)
+    ├── .mcp           # MCP declarations stored per agent / session
     ├── data/          # offloaded multimodal payloads
-    ├── skills/        # skill subdirectories, each with SKILL.md
+    ├── skills/        # the .seed template and per-agent skill directories
     └── sessions/      # per-session context.jsonl and tool-result files
     ```
 
@@ -72,9 +71,9 @@ Each backend has its own persistence model and directory layout. Pick the tab ma
 
     ```
     {workdir}/         # host directory, bind-mounted to /workspace in container
-    ├── .mcp           # registered MCP client configs (JSON array)
+    ├── .mcp           # MCP declarations stored per agent / session
     ├── data/          # offloaded multimodal payloads
-    ├── skills/        # skill subdirectories, each with SKILL.md
+    ├── skills/        # the .seed template and per-agent skill directories
     └── sessions/      # per-session context.jsonl and tool-result files
     ```
 
@@ -98,9 +97,9 @@ Each backend has its own persistence model and directory layout. Pick the tab ma
 
     ```
     $workdir/          # inside the sandbox
-    ├── .mcp           # registered MCP client configs (JSON array)
+    ├── .mcp           # MCP declarations stored per agent / session
     ├── data/          # offloaded multimodal payloads
-    ├── skills/        # skill subdirectories, each with SKILL.md
+    ├── skills/        # the .seed template and per-agent skill directories
     └── sessions/      # per-session context.jsonl and tool-result files
     ```
 
@@ -123,9 +122,9 @@ Each backend has its own persistence model and directory layout. Pick the tab ma
 
     ```
     $workdir/          # inside the sandbox
-    ├── .mcp           # registered MCP client configs (JSON array)
+    ├── .mcp           # MCP declarations stored per agent / session
     ├── data/          # offloaded multimodal payloads
-    ├── skills/        # skill subdirectories, each with SKILL.md
+    ├── skills/        # the .seed template and per-agent skill directories
     └── sessions/      # per-session context.jsonl and tool-result files
     ```
 
@@ -149,9 +148,9 @@ Each backend has its own persistence model and directory layout. Pick the tab ma
 
     ```
     /workspace/        # inside the Pod, backed by the PVC
-    ├── .mcp           # registered MCP client configs (JSON array)
+    ├── .mcp           # MCP declarations stored per agent / session
     ├── data/          # offloaded multimodal payloads
-    ├── skills/        # skill subdirectories, each with SKILL.md
+    ├── skills/        # the .seed template and per-agent skill directories
     └── sessions/      # per-session context.jsonl and tool-result files
     ```
 
@@ -175,9 +174,9 @@ Each backend has its own persistence model and directory layout. Pick the tab ma
 
     ```
     /workspace/        # inside the sandbox (SANDBOX_WORKDIR)
-    ├── .mcp           # registered MCP client configs (JSON array)
+    ├── .mcp           # MCP declarations stored per agent / session
     ├── data/          # offloaded multimodal payloads
-    ├── skills/        # skill subdirectories, each with SKILL.md
+    ├── skills/        # the .seed template and per-agent skill directories
     └── sessions/      # per-session context.jsonl and tool-result files
     ```
 
@@ -202,7 +201,7 @@ Each backend has its own persistence model and directory layout. Pick the tab ma
 </Tabs>
 
 <Note>
-`default_mcps` and `skill_paths` are seed-time inputs: they populate a brand-new workspace on first `initialize()`. On restart the workspace restores its MCP list from the persisted `.mcp` file, so re-passing the seeds is a no-op.
+`default_mcps` and `skill_paths` are seed-time inputs, but they never make resources shared inside a shared workspace. Each agent / session gets its own client instances the first time it accesses MCPs, and each agent gets its own skill partition copied from `skills/.seed` the first time it accesses skills. Later additions and removals only affect that agent / session.
 </Note>
 
 ## Integrate with Agent
@@ -217,14 +216,20 @@ from agentscope.workspace import LocalWorkspace
 workspace = LocalWorkspace(workdir="./my-workspace")
 await workspace.initialize()
 
+agent_id = "coder"
+session_id = "session-1"
+
 agent = Agent(
     name="coder",
     system_prompt="You are a coding assistant.",
     model=model,
     toolkit=Toolkit(
         tools=await workspace.list_tools(),
-        mcps=await workspace.list_mcps(),
-        skills_or_loaders=await workspace.list_skills(),
+        mcps=await workspace.list_mcps(
+            agent_id=agent_id,
+            session_id=session_id,
+        ),
+        skills_or_loaders=await workspace.list_skills(agent_id=agent_id),
     ),
     offloader=workspace,
 )
@@ -243,8 +248,11 @@ Because the workspace exposes its resources as flat lists, you can partition the
 ```python
 from agentscope.tool import Toolkit, ToolGroup
 
-mcps = await workspace.list_mcps()
-skills = await workspace.list_skills()
+mcps = await workspace.list_mcps(
+    agent_id=agent_id,
+    session_id=session_id,
+)
+skills = await workspace.list_skills(agent_id=agent_id)
 
 toolkit = Toolkit(
     tools=await workspace.list_tools(),         # always active (basic group)
