@@ -18,7 +18,7 @@ A routing rule (binding) has four fields: the first two say "which messages to m
 | `agent_id` | Which agent handles a match | required |
 | `session_scope` | Which session a matched message joins (values below) | `per_chat` |
 
-`match_value` is an **exact match** (not a prefix, not a regex); only `"*"` is special and matches everything. When `match_key` points at a key in `metadata`, the matchable values are platform-defined: Feishu's `chat_type` is `group` / `p2p`, Discord's is `guild` / `dm`; see each platform's page.
+`match_value` is an **exact match** (not a prefix, not a regex); only `"*"` is special and matches everything. When `match_key` points at a key in `metadata`, the matchable values are platform-defined: Feishu's `chat_type` is `group` / `p2p`, DingTalk's is `group` / `private`, Discord's is `guild` / `dm`; see each platform's page.
 
 ## Session scope
 

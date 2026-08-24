@@ -119,6 +119,7 @@
                           "versions/2.0.7dev/en/deploy/channel/overview",
                           "versions/2.0.7dev/en/deploy/channel/routing",
                           "versions/2.0.7dev/en/deploy/channel/feishu",
+                          "versions/2.0.7dev/en/deploy/channel/dingtalk",
                           "versions/2.0.7dev/en/deploy/channel/discord",
                           "versions/2.0.7dev/en/deploy/channel/custom"
                         ]
