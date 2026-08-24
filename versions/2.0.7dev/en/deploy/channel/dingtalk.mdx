@@ -108,11 +108,18 @@ The DingTalk channel's platform-specific fields:
 When routing matches on `chat_type`, group chats use `group` and DMs use `private`.
 </Note>
 
-## Customising Card Appearance
+## Customising Cards
 
-Tool approval and streaming replies work out of the box: both template IDs default to a template DingTalk publishes, with the approval card's title, body, and two buttons laid out at send time and streaming replies written into the public AI card's Markdown variable. **Connecting DingTalk does not require reading this section.**
+The DingTalk channel delivers two kinds of card: an **approval card** when the agent calls a tool that needs confirmation, and a **streaming card** that carries a reply as it is generated. Both use a template DingTalk publishes, so **connecting the channel needs no card configuration at all**.
 
-What the public templates look like is fixed. Their layout, button colours, and button widths cannot be adjusted, and the card's built-in feedback row cannot be removed. To change any of that, build a template in the [Card Platform](https://open-dev.dingtalk.com/fe/card) and put its ID in the channel config. No channel code changes.
+What those templates look like is fixed: the layout, the button colours, and the button widths cannot be adjusted, and the card's built-in feedback row cannot be removed. To change any of that, build a template in the [Card Platform](https://open-dev.dingtalk.com/fe/card) and put its ID in the matching channel config field:
+
+| Card | Config field | Default |
+|---|---|---|
+| Approval card | `approval_card_template_id` | DingTalk's published general AI card |
+| Streaming card | `streaming_card_template_id` | DingTalk's published streaming AI card |
+
+Switching to a template of your own needs no channel code changes, but the template has to declare the variables the channel fills in. Each card's requirements follow.
 
 ### Approval Card
 
@@ -147,7 +154,7 @@ Clearing `approval_card_template_id` turns approval cards off. Tool calls awaiti
 
 ### Streaming Card
 
-Streaming replies need an AI card streaming component in the template. Set its template variable name as `streaming_card_key`; on the default template that name is `content`.
+A streaming card's template needs an AI card streaming component, which is where the channel writes the reply as it grows. Set that component's variable name as `streaming_card_key` in the channel config; on the built-in template the name is `content`.
 
 ## Agent Tools
 
