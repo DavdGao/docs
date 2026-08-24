@@ -6,11 +6,11 @@ description: "Chat with your service's agents inside DingTalk."
 The DingTalk channel connects over the official Stream mode long connection, so it needs no public callback URL and works from a local or intranet deployment. The DingTalk channel currently supports:
 
 - **Interactive card approval**: when an agent calls a tool that needs approval, it asks for confirmation as a card in DingTalk; click a button to allow or deny;
-- **Streaming replies**: with an AI card template configured, the answer updates within a single card as it is generated; without one, replies are sent as regular Markdown messages;
+- **Streaming replies**: the answer updates within a single AI card as it is generated;
 - **Multimodal input**: receive images, files, voice, video, and rich-text messages from users and pass them to the agent;
 - **Outbound sending**: the agent can look up the directory and known chats, then send messages, images, and files to users or groups outside the current conversation.
 
-Connecting takes four steps: create an app on the [DingTalk Open Platform](https://open.dingtalk.com/) and get its credentials, prepare the card templates, start an agent service to host the channel, then add the DingTalk channel in the management UI.
+Connecting takes three steps: create an app on the [DingTalk Open Platform](https://open.dingtalk.com/) and get its credentials, start an agent service to host the channel, then add the DingTalk channel in the management UI. Both card templates already have defaults, so prepare one only to customise how a card looks.
 
 ## Prerequisites
 
@@ -45,34 +45,46 @@ Create and configure the enterprise internal app and its robot on the [DingTalk 
   </Step>
 </Steps>
 
-## Prepare Card Templates
+## Card Templates
 
-DingTalk interactive cards must be built first in the [Card Platform](https://open-dev.dingtalk.com/fe/card); at runtime the channel only fills in the template variables. The channel uses two kinds of templates, both optional: leave one out and the corresponding capability degrades.
+DingTalk interactive cards must be built first in the Card Platform; at runtime the channel only fills in the template variables. Both templates the channel uses default to a template DingTalk publishes, so **a channel works without configuring either**: the approval card gets its title, body, and two buttons laid out at send time, and streaming replies write into the public AI card's Markdown variable.
 
-The **approval card template** drives tool confirmation. The channel fills in these variables when it delivers a card:
+To customise how a card looks (add a tag, recolour the buttons, rearrange the layout), build a template in the [Card Platform](https://open-dev.dingtalk.com/fe/card) and put its ID in the channel config. No channel code changes.
 
-| Variable | Content |
+### Customising the Approval Card
+
+The channel fills in these variables when it delivers an approval card. Bind whichever ones the template shows:
+
+| Variable | Content | Example |
+|---|---|---|
+| `title` | Which agent is asking | `Friday 提交的工具执行` |
+| `name` | The tool awaiting approval | `Bash` |
+| `input` | The tool's arguments, trimmed by bytes when long | `{"command": "ls -la"}` |
+| `created_at` | When the tool call was made | `2026-08-24 18:26:25` |
+| `status` | Card state | `pending` / `approved` / `denied` |
+
+`name`, `input`, and `created_at` come straight off the agent's tool call (the same-named fields of `ToolCallBlock`), so authoring a template needs no vocabulary beyond the call being approved. `status` is the card's own state: `pending` when delivered, then updated to `approved` or `denied` once someone decides. A template can switch its buttons and result text on it.
+
+Give the template an approve button and a deny button, both configured as callback buttons, and carry `action` in their callback parameters (`cardPrivateData.params`):
+
+| Decision | Accepted `action` values |
 |---|---|
-| `title` | Card title |
-| `markdown` | The pending tool's name and an argument summary |
-| `status` | Card state: `pending` / `approved` / `denied` |
-| `toolCallId` | Identifier of this tool call |
-| `chatId` | Identifier of the chat that triggered the call |
-| `agentId` | Identifier of the agent handling the message |
-| `sessionId` | Identifier of the session the message belongs to |
-| `approverId` | The user allowed to decide, the peer's `staffId` in a DM |
+| Approve | `allow`, `approve`, `approved`, `accept`, `agree` |
+| Deny | `deny`, `denied`, `reject` |
 
-The template needs an approve button and a deny button, both configured as callback buttons that carry `action` plus `toolCallId`, `chatId`, `agentId`, `sessionId`, and `approverId` in their callback parameters (`cardPrivateData.params`). For `action`, approval accepts `allow`, `approve`, `accept`, or `agree`, and denial accepts `deny` or `reject`.
+A button carries **nothing but `action`**. The channel finds the tool call from the `outTrackId` it pinned when creating the card, and the chat from what the callback itself reports.
+
+<Tip>
+The repository ships a template ready to import: [`assets/dingtalk/tool_approval_card.json`](https://github.com/agentscope-ai/agentscope/blob/main/assets/dingtalk/tool_approval_card.json). Import it when creating a template in the Card Platform, **publish** it, then put its ID in `approval_card_template_id`. Forgetting to publish makes card creation fail with `param.templateUnpublished`.
+</Tip>
 
 <Warning>
-Without an approval card template, tool calls awaiting confirmation cannot be answered from DingTalk, and the three outbound tools `SendMessage`, `SendImage`, and `SendFile` are not exposed to the agent.
+Clearing `approval_card_template_id` turns approval cards off. Tool calls awaiting confirmation then cannot be answered from DingTalk; the channel says so in the chat and the session stays parked.
 </Warning>
 
-The **streaming card template** drives streaming replies. Place an AI card streaming component in the template, and set its template variable name as `streaming_card_key` in the channel config (`content` by default).
+### Customising the Streaming Card
 
-<Note>
-DingTalk caps the content size of a single card update. Once the reply grows past that cap, the channel stops streaming and sends the complete answer as a regular Markdown message instead.
-</Note>
+Streaming replies need an AI card streaming component in the template. Set its template variable name as `streaming_card_key`; on the default template that name is `content`.
 
 ## Start Agent Service
 
@@ -132,8 +144,8 @@ The DingTalk channel's platform-specific fields:
 | `show_thinking` | Include the model's reasoning in the reply | `false` |
 | `show_tool_process` | Include tool calls and results in the reply | `false` |
 | `max_media_bytes` | Maximum bytes for one inbound or outbound attachment, capped at 100 MB | `10485760` (10 MB) |
-| `approval_card_template_id` | Template ID used for tool approval cards; empty means no approval card is delivered | `""` |
-| `streaming_card_template_id` | AI card template ID used for streaming replies; empty means replies go out as regular Markdown | `""` |
+| `approval_card_template_id` | Template ID used for tool approval cards; empty means no approval card is delivered | DingTalk's published AI card |
+| `streaming_card_template_id` | AI card template ID used for streaming replies; empty means replies go out as regular Markdown | DingTalk's published streaming AI card |
 | `streaming_card_key` | Template variable name of the AI card streaming component | `content` |
 
 <Note>
@@ -142,18 +154,18 @@ When routing matches on `chat_type`, group chats use `group` and DMs use `privat
 
 ## Agent Tools
 
-Once the approval card template is configured, the channel gives the agent an extra set of DingTalk tools for sending to users or groups outside the current conversation. The lookup tools return a target of the form `user:<staffId>` or `group:<openConversationId>`, which the agent passes verbatim to a send tool.
+The channel gives the agent an extra set of DingTalk tools for sending to users or groups outside the current conversation. The lookup tools return a target of the form `user:<staffId>` or `group:<openConversationId>`, which the agent passes verbatim to a send tool.
 
 | Tool | Purpose | Permission |
 |---|---|---|
-| `ListConversations` | List the chats this channel process has received messages from since it started | Read-only, allowed directly |
+| `ListConversations` | List the chats this process has received messages from; empty in a split deployment | Read-only, allowed directly |
 | `ListUsers` | Search the enterprise directory for users by name | Read-only, allowed directly |
 | `SendMessage` | Send Markdown text to a given user or group | Needs user confirmation |
 | `SendImage` | Send an image from the workspace to a given user or group, rendered inline | Needs user confirmation |
 | `SendFile` | Send a file from the workspace to a given user or group; doc, docx, pdf, rar, xlsx, and zip are supported | Needs user confirmation |
 
 <Warning>
-A DingTalk enterprise robot cannot enumerate every group it belongs to, so `ListConversations` only lists chats that have sent a message since the current process started. To make a group appear in the result, send the robot a message in that group first.
+A DingTalk enterprise robot cannot enumerate every group it belongs to, and the process answering this call is not the one holding the robot's connection, so in a split deployment `ListConversations` comes back empty and stays empty. Treat an empty result as the normal case and ask the user for the target.
 </Warning>
 
 ## Verify and Troubleshoot
@@ -161,7 +173,8 @@ A DingTalk enterprise robot cannot enumerate every group it belongs to, so `List
 - Check the channel status in the management UI, or call `GET /channels/{id}/status` to confirm the Stream connection is established.
 - If the robot doesn't respond in a group, first check `only_at_reply` and the @-mention behavior, then check that the send-message permission was requested and published with the version.
 - If the robot never comes online, check the Client ID / Client Secret and that the message delivery mode is set to Stream.
-- If clicking a card button does nothing, check that the button's callback parameters carry `action` and each identifier field from the table above.
+- If clicking a card button does nothing, check that the button is configured as a callback request and that its `action` value is one of those listed above.
+- If group chats work but a DM fails with `chatbotId.notAllow.sendOTO`, the robot's one-to-one messaging is not enabled: enable the robot in the developer console and publish an app version.
 - If an attachment fails to send, check whether the file exceeds `max_media_bytes` and whether its extension is one DingTalk supports.
 
 ## Further Reading
