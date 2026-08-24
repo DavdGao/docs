@@ -7,6 +7,103 @@ description: "AgentScope 版本改动和更新日志。"
 如需查看完整的提交历史与贡献者名单，请访问 [GitHub Releases 页面](https://github.com/agentscope-ai/agentscope/releases)。
 </Tip>
 
+## v2.0.7
+
+*发布于 2026-08-24。*
+
+<Note>
+**Highlight**：本次版本新增了
+	- 终端控制台，无需启动 Web 服务即可试用与调试智能体，
+	- 共享工作区内按智能体隔离的 MCP 会话与技能，
+	- 钉钉渠道，同时将渠道的长连接收拢到专用 worker 中，以及
+	- 让团队成员必须向 leader 汇报的团队中间件。
+</Note>
+
+### 新增
+
+**控制台**
+
+- 新增 `agentscope.console` 模块，用于在终端中驱动智能体。`ConsoleRenderer` 消费 `Agent.reply_stream` 并渲染其中的事件——实时输出文本与思考增量，将并发流式的工具调用缓冲为完整块后再打印以避免交错，渲染 hint 块、每次模型调用的 token 用量，以及确认请求中建议的权限规则——提供 `quiet` / `default` / `debug` 三档详细程度，并会跳过无法识别的事件类型，使其在事件协议演进后仍可工作。`launch_console(agent)` 在此基础上提供零代码的交互式循环，支持工具调用确认（`y` / `N` / `a`lways）与分级的 Ctrl+C 处理。`rich` 进入核心依赖。([#2297](https://github.com/agentscope-ai/agentscope/pull/2297))
+
+**Workspace**
+
+- 按智能体隔离 MCP 客户端会话，使多个智能体可以共享同一个工作区而不共享有状态的 MCP 客户端。`list_mcps()` / `add_mcp()` / `remove_mcp()` 新增 `agent_id` 参数，工作区中的 MCP 存储变为 `{agent_id: [clients]}`，每个智能体的客户端在首次访问时从 `default_mcps` 深拷贝并独立建连。工作区目录、技能与卸载存储仍然共享，旧的 `.mcp` 文件格式会自动迁移。([#1951](https://github.com/agentscope-ai/agentscope/pull/1951))
+- 按智能体隔离技能，并按会话选择技能。`skills/` 下新增一层以智能体划分的目录，在该智能体首次调用技能相关能力时由 `skill_paths` 播种，因此智能体修改自己的技能不再改变其他智能体的行为，也不再为与自己无关的技能付出上下文 token。`agent_id` 为仅限关键字参数，未指定时使用 `default` 分区。([#2283](https://github.com/agentscope-ai/agentscope/pull/2283))
+- 新增 `WorkspacePrewarmMixin` 与 `PrewarmConfig`，预先构建并缓冲少量工作区，使会话可以直接拿到一个已经运行起来的工作区，而不必等待镜像拉取与沙箱初始化。在构建过程中到达的请求会等待这次已经在进行的构建，而不会另起一次；`max_creating` 限制并发构建数，使突发的会话排队而不是冲垮服务方。已接入 Docker 与 E2B 两个管理器，`size: 0`（默认值）表示关闭。([#1755](https://github.com/agentscope-ai/agentscope/pull/1755))
+
+**Agent**
+
+- `on_reply` 中间件现在可以否决一次回复的结束：收到 `ReplyEndEvent` 后不向下 yield，即可在同一次回复内强制再进行一轮推理-行动——`reply_id` 不变，不会额外产生 `ReplyStartEvent`，`max_iters` 依然生效——任务约束校验与迟到的收件箱消息正需要这种能力。同时提供死循环保护：若事件被反复吞掉而中间没有任何推理或行动，将抛出异常。([#2322](https://github.com/agentscope-ai/agentscope/pull/2322))
+- `ContextConfig` 新增 `max_image_num`，用于限制上下文中保留的图片数量。`compress_context` 会在 token 统计之前先执行该限制；超出限制的较早图片会通过 `offloader.offload_data_block` 卸载并替换为记录了路径的提示，未配置 offloader 时则直接丢弃并替换为同样的提示。默认值为 `None`，即不限制。([#2362](https://github.com/agentscope-ai/agentscope/pull/2362))
+
+**Agent Team**
+
+- 新增 `TeamMemberLoopMiddleware`，要求团队成员必须以调用 `TeamSay` 向 leader 汇报作为回复的结束，并在迭代次数耗尽时引导它向 leader 请求继续执行的许可。持续不汇报就结束的成员最多被追问 `max_nudges` 次，超出后该次回复以错误结束，而不是在会话锁下无限循环。([#2379](https://github.com/agentscope-ai/agentscope/pull/2379))
+- 成员的一轮以 `ERROR` 或 `INTERRUPTED` 结束且未汇报时，通知 leader。此前这种情况会让 leader 一直等待一个永远不会到来的答复；现在 leader 会收到一个说明成员与失败原因的 hint 块，投递路径与 `TeamSay` 汇报完全一致。([#2386](https://github.com/agentscope-ai/agentscope/pull/2386))
+
+**Tool**
+
+- `FunctionTool` 支持 `input_schema` 参数，可传入 JSON schema 字典，或传入 pydantic `BaseModel` 子类（经 `model_json_schema()` 转换），直接接管工具的输入 schema，而不再从函数的类型标注与 docstring 中提取。这覆盖了从其他框架迁移而来的工具定义，以及函数签名无法承载标注的场景，也让 `FunctionTool` 与本就直接透传外部 `inputSchema` 的 `MCPTool` 保持一致。([#2378](https://github.com/agentscope-ai/agentscope/pull/2378))
+- `Read` 工具按文件扩展名分发，而不再一律按 UTF-8 解码：图片、音频与视频以 base64 `DataBlock` 返回，PDF 按页返回提取出的文本，页码范围由新增的 `pages` 参数指定。文本文件行为不变。([#2114](https://github.com/agentscope-ai/agentscope/pull/2114))
+
+**渠道**
+
+- 新增 `DingTalkChannel`，将智能体服务中的智能体接入钉钉。入站的机器人消息与卡片回调走官方 Stream SDK，出站一律走 OpenAPI，因此只需配置 Client ID 与 Client Secret。单聊与群聊均支持，群聊可通过 `only_at_reply` 只响应被 @ 的消息；智能体会获得 `ListConversations`、`ListUsers`、`SendMessage`、`SendFile` 与 `SendImage` 五个工具。流式回复与工具审批以互动卡片呈现，两者的模板 ID 都已预设为钉钉发布的公共模板，无需自行在卡片平台建模板即可使用；如需自定义外观，可通过 `streaming_card_template_id` 与 `approval_card_template_id` 指定自己的模板。([#2285](https://github.com/agentscope-ai/agentscope/pull/2285)、[#2409](https://github.com/agentscope-ai/agentscope/pull/2409))
+- 将渠道的长连接收拢到专用 worker 中，通过 `enable_channel_worker` 启用。平台只会把一个机器人的事件交给一条连接，因此每个副本都去建连意味着飞书、钉钉、Slack 上多出的连接全部浪费，而 Discord 上每条消息都会被重复投递。现在与连接绑定的状态被单独拆出：`ChannelClients` 从渠道记录构建实例但不调用 `start_listening`，因此任何进程都可以发送回复、查询会话列表并为智能体挂载该渠道的平台工具。缓存的实例会在记录变更时重建，凭据轮换无需重启即可生效。([#2390](https://github.com/agentscope-ai/agentscope/pull/2390))
+- 支持在 SQL 存储中保存渠道记录。此前 SQL 存储直接继承了 `NotImplementedError`，任何非 Redis 部署——包括桌面版——都完全无法使用渠道。新增 `channels` 表，以 `UNIQUE(platform_bot_id)` 取代 Redis 中单独维护的机器人索引键，并配套 Alembic 迁移 `0003_channels`。([#2388](https://github.com/agentscope-ai/agentscope/pull/2388))
+
+**RAG**
+
+- 新增 `VectorStoreBase.list_chunks()`，按 `chunk_index` 顺序返回某个文档的切片，四种向量存储均已实现。在此之上，智能体服务新增了切片浏览、原始文档预览（直接从上传时已写入的对象存储读取）与携带完整配置的知识库列表，以及三者对应的前端页面。([#2372](https://github.com/agentscope-ai/agentscope/pull/2372))
+- 切片器通过 pydantic 的 `Parameters` 内部类声明自己的可调参数，与模型卡片、RAG 中间件的做法一致，取代原先手写的 JSON schema 字典；前端通过共用的 `SchemaForm` 动态渲染这些参数。([#2083](https://github.com/agentscope-ai/agentscope/pull/2083))
+
+**WebUI**
+
+- 回复因超出最大迭代次数而结束时，在对话页面展示提示。([#2381](https://github.com/agentscope-ai/agentscope/pull/2381))
+
+### 变更
+
+**渠道**
+
+- 回复改由产生它的节点直接投递，不再入队等待持有入站连接的节点去消费、抢占租约、重新订阅事件流并转发。发送本身只是基于已存储凭据的 REST 调用，因此 #2390 之后已无必要的这一整条回路——`enqueue_channel_output`、`channel:outbound` 队列及其唤醒信号、转发租约，以及 dispatcher 中的消费与转发路径——全部移除。同时消除了两个缺陷：60 秒超时会截断任何运行时长超过一分钟的回复；以及消费节点若并未托管该渠道，会无声地丢弃这条已出队的任务。([#2395](https://github.com/agentscope-ai/agentscope/pull/2395))
+
+**Agent**
+
+- 废弃 `ExceedMaxItersEvent`。为保持向后兼容它仍会被发出，但不再承载语义；退出原因由 `ReplyEndEvent.finished_reason == EXCEED_MAX_ITERS` 表达。([#2322](https://github.com/agentscope-ai/agentscope/pull/2322))
+
+**RAG**
+
+- 创建知识库时必须选择切片器，与嵌入模型的选择保持一致，同时移除隐式的 `default_chunker` 回退链。([#2083](https://github.com/agentscope-ai/agentscope/pull/2083))
+
+**Model**
+
+- Anthropic、DeepSeek、DashScope 与 Moonshot 在结构化输出调用中显式关闭思考模式——这些服务方在思考模式开启时会拒绝强制的 `tool_choice`，从而导致 `generate_structured_output` 与 `compress_context` 间歇性失败。同时 `_compress_context_impl` 增加了截断兜底：若重试耗尽后摘要生成仍然失败，则丢弃较早的消息而不是抛出异常，让智能体在缩减的上下文下继续运行。([#2140](https://github.com/agentscope-ai/agentscope/pull/2140))
+
+### 修复
+
+**Agent Service**
+
+- 为定时任务创建的会话绑定真实的工作区。此前该会话以 `workspace_id=""` 持久化，而各工作区管理器都把空串当作一个字面量的缓存键而非“未绑定”，导致一个部署中所有用户、所有智能体的定时会话全部解析到同一个工作区：同一个沙箱、同一批文件、同一份 `.mcp` 配置与已安装技能。([#2410](https://github.com/agentscope-ai/agentscope/pull/2410))
+- 修复会话收件箱中的消息被搁置到用户下一次发言才被消费的问题。定时提示词、团队消息、新建 worker 的首个任务、后台工具结果都可能长时间无人消费：生产者此前依据运行锁来判断是否已有运行会消费收件箱，而一个已经完成最后一次消费、正在收尾的运行仍然持有该锁。现在运行会显式注册为收件箱的消费者，交接在一把短锁下完成，唤醒信号恰好在无人注册时才产生——既不会丢消息，也不会唤起一次无事可做的空转。([#2295](https://github.com/agentscope-ai/agentscope/pull/2295))
+- 将会话状态加载、智能体组装与挂起状态检查移入分布式会话锁内，使等待中的运行不再读取并回写上一次运行遗留的陈旧状态。([#2232](https://github.com/agentscope-ai/agentscope/pull/2232))
+
+**Tool**
+
+- `Bash` 依据后端的操作系统而非宿主机的操作系统选择 shell，Windows 宿主机驱动 Linux 沙箱时不再把 `cmd /c` 发进容器。([#2366](https://github.com/agentscope-ai/agentscope/pull/2366))
+- 提取工具 schema 时解析 PEP 563 惰性标注，使用了 `from __future__ import annotations` 的模块不再产生字符串类型的参数。([#2371](https://github.com/agentscope-ai/agentscope/pull/2371))
+
+**MCP**
+
+- 有状态的客户端可以重新连接：`close()` 会清除已经用尽的一次性 transport，下一次 `connect()` 重新创建，而不是复用失效的旧 transport 导致失败。([#2308](https://github.com/agentscope-ai/agentscope/pull/2308))
+
+**RAG**
+
+- Qdrant 与 Milvus 以确定性 id 写入切片，索引 worker 在流程中途崩溃后重试时会覆盖此前的部分写入，而不是留下两份完整的切片。([#2372](https://github.com/agentscope-ai/agentscope/pull/2372))
+
+**Agent**
+
+- 在上报的 usage 中保留 prompt cache token。([#2318](https://github.com/agentscope-ai/agentscope/pull/2318))
+
 ## v2.0.6
 
 *发布于 2026-08-07。*

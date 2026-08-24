@@ -7,6 +7,103 @@ description: "Version history of AgentScope 2.x, including new features, changes
 For the full commit-level history and contributor list, see the [GitHub releases page](https://github.com/agentscope-ai/agentscope/releases).
 </Tip>
 
+## v2.0.7
+
+*Released on 2026-08-24.*
+
+<Note>
+**Highlight**: This release adds
+	- a terminal console for trying and debugging an agent without launching the web service,
+	- per-agent isolation of MCP sessions and skills inside a shared workspace,
+	- the DingTalk channel, with the channel long connections moved into a dedicated worker, and
+	- team middleware that keeps a member reporting back to its leader.
+</Note>
+
+### Added
+
+**Console**
+
+- Add the `agentscope.console` module for driving an agent from the terminal. `ConsoleRenderer` consumes `Agent.reply_stream` and renders it — live text and thinking deltas, concurrently streamed tool calls buffered and printed as whole blocks so they never interleave, hint blocks, per-call token usage, and the permission rules suggested on a confirmation request — at three verbosity levels (`quiet` / `default` / `debug`), skipping unknown event types so it keeps working as the event protocol evolves. `launch_console(agent)` wraps it in a zero-code interactive loop with tool-call confirmation (`y` / `N` / `a`lways) and tiered Ctrl+C handling. `rich` becomes a core dependency. ([#2297](https://github.com/agentscope-ai/agentscope/pull/2297))
+
+**Workspace**
+
+- Isolate MCP client sessions per agent, so several agents can share one workspace without sharing stateful MCP clients. `list_mcps()` / `add_mcp()` / `remove_mcp()` take an `agent_id`, a workspace's MCP storage becomes `{agent_id: [clients]}`, and each agent's clients are cloned from `default_mcps` and connected on first access. The directory, skills, and offload storage stay shared, and the old `.mcp` file format is migrated automatically. ([#1951](https://github.com/agentscope-ai/agentscope/pull/1951))
+- Isolate skills per agent, and select them per session. `skills/` gains a directory level per agent, seeded from `skill_paths` on that agent's first skill call, so an agent editing its own skill no longer changes anyone else's behaviour and no longer pays context tokens for skills it does not use. `agent_id` is keyword-only; a caller that names none gets the `default` partition. ([#2283](https://github.com/agentscope-ai/agentscope/pull/2283))
+- Add `WorkspacePrewarmMixin` and `PrewarmConfig`, which keep a small buffer of workspaces built ahead of demand so a session is handed one that is already running instead of waiting out an image pull and a sandbox bootstrap. A request arriving mid-build waits out the build already in flight rather than starting a second one, and `max_creating` caps concurrent builds so a burst of sessions queues instead of stampeding the provider. Wired into the Docker and E2B managers; `size: 0` (the default) disables it. ([#1755](https://github.com/agentscope-ai/agentscope/pull/1755))
+
+**Agent**
+
+- An `on_reply` middleware can now veto the end of a reply: receiving `ReplyEndEvent` without yielding it forces another reasoning-acting round inside the same reply — same `reply_id`, no extra `ReplyStartEvent`, `max_iters` still applies — which is what task-constraint enforcement and late-arriving inbox messages need. A busy-loop guard raises when the event is swallowed repeatedly with no reasoning or acting in between. ([#2322](https://github.com/agentscope-ai/agentscope/pull/2322))
+- Add `max_image_num` to `ContextConfig`, bounding the number of images kept in the context. `compress_context` enforces it before token counting; the oldest images over the limit are offloaded through `offloader.offload_data_block` and replaced by a hint recording the path, or dropped and replaced by the same hint when no offloader is configured. Defaults to `None`, i.e. no limit. ([#2362](https://github.com/agentscope-ai/agentscope/pull/2362))
+
+**Agent Team**
+
+- Add `TeamMemberLoopMiddleware`, which requires a team member to end its reply by reporting to the leader with `TeamSay`, and guides it to ask the leader for permission to continue when it runs out of iterations. A member that keeps ending without reporting is nudged at most `max_nudges` times, after which the reply is released as an error rather than looping under the session lock. ([#2379](https://github.com/agentscope-ai/agentscope/pull/2379))
+- Tell the leader when a member's turn ends as `ERROR` or `INTERRUPTED` without reporting. Such a turn previously left the leader waiting for an answer that was never coming; it now receives a hint block naming the member and the reason, delivered the same way `TeamSay` delivers a report. ([#2386](https://github.com/agentscope-ai/agentscope/pull/2386))
+
+**Tool**
+
+- `FunctionTool` accepts an `input_schema` argument — a JSON schema dict, or a pydantic `BaseModel` subclass converted through `model_json_schema()` — which takes over the schema instead of extracting it from the function's annotations and docstring. This covers tool definitions migrated from other frameworks and functions whose signature cannot carry annotations, and aligns `FunctionTool` with `MCPTool`, which already passes an external `inputSchema` through. ([#2378](https://github.com/agentscope-ai/agentscope/pull/2378))
+- The `Read` tool dispatches by file extension instead of decoding everything as UTF-8: images, audio, and video come back as base64 `DataBlock`s, and PDFs as extracted text per page selected with a new `pages` argument. Text files are unchanged. ([#2114](https://github.com/agentscope-ai/agentscope/pull/2114))
+
+**Channel**
+
+- Add `DingTalkChannel`, which puts the agents of the agent service on DingTalk. It takes inbound robot and card callbacks over the official Stream SDK and sends everything outbound over the OpenAPI, so only a Client ID and Client Secret are configured. Direct and group messages are both supported, with optional mention filtering through `only_at_reply`; the agent is handed `ListConversations`, `ListUsers`, `SendMessage`, `SendFile`, and `SendImage`. Streaming replies and tool approval render as interactive cards, both preset to DingTalk's public templates so neither needs a Card Platform template of your own — set `streaming_card_template_id` or `approval_card_template_id` to use your own instead. ([#2285](https://github.com/agentscope-ai/agentscope/pull/2285), [#2409](https://github.com/agentscope-ai/agentscope/pull/2409))
+- Hold the channels' long connections in a dedicated worker, enabled with `enable_channel_worker`. A platform hands one bot's events to one connection, so every replica connecting meant wasted connections on Feishu, DingTalk, and Slack and duplicated messages on Discord. Connection-bound state is now separated from the rest: `ChannelClients` builds a channel from its record without calling `start_listening`, so any process can send a reply, list chats, and attach the channel's platform tools. Cached instances are rebuilt when the record changes, so a credential rotation takes effect without a restart. ([#2390](https://github.com/agentscope-ai/agentscope/pull/2390))
+- Support channel records on SQL storage, which previously inherited `NotImplementedError` and left any non-Redis deployment — the desktop build included — without channels at all. Adds the `channels` table with `UNIQUE(platform_bot_id)` in place of the Redis bot-index key, and Alembic revision `0003_channels`. ([#2388](https://github.com/agentscope-ai/agentscope/pull/2388))
+
+**RAG**
+
+- Add `VectorStoreBase.list_chunks()`, returning one document's chunks ordered by `chunk_index`, implemented across all four vector stores. On top of it the agent service gains chunk browsing, a raw-document preview served from the blob store the upload already wrote, and a knowledge-base listing carrying the full configuration, together with the web UI for all three. ([#2372](https://github.com/agentscope-ai/agentscope/pull/2372))
+- Chunkers declare their tunable parameters through a pydantic `Parameters` inner class, the same way model cards and RAG middleware already do, replacing the hand-written JSON schema dicts; the web UI renders them through the shared `SchemaForm`. ([#2083](https://github.com/agentscope-ai/agentscope/pull/2083))
+
+**WebUI**
+
+- Show an alert on the chat page when a reply ends by exceeding the maximum number of iterations. ([#2381](https://github.com/agentscope-ai/agentscope/pull/2381))
+
+### Changed
+
+**Channel**
+
+- A reply is delivered by the node that produced it, instead of being queued for the node holding the inbound connection to drain, claim, re-subscribe to, and forward. Sending is plain REST against the stored credentials, so the round-trip #2390 made unnecessary — `enqueue_channel_output`, the `channel:outbound` queue and its wake signal, the forward lease, and the dispatcher's drain and forward paths — is removed. Two defects go with it: a 60-second timeout that truncated any reply whose run took longer than a minute, and a drained job silently dropped when the draining node did not host that channel. ([#2395](https://github.com/agentscope-ai/agentscope/pull/2395))
+
+**Agent**
+
+- Deprecate `ExceedMaxItersEvent`. It is still emitted for backward compatibility but carries no semantics; the exit reason lives in `ReplyEndEvent.finished_reason == EXCEED_MAX_ITERS`. ([#2322](https://github.com/agentscope-ai/agentscope/pull/2322))
+
+**RAG**
+
+- Choosing a chunker is mandatory when creating a knowledge base, mirroring embedding-model selection, and the implicit `default_chunker` fallback chain is removed. ([#2083](https://github.com/agentscope-ai/agentscope/pull/2083))
+
+**Model**
+
+- Anthropic, DeepSeek, DashScope, and Moonshot disable thinking for structured-output calls, since those providers reject a forced `tool_choice` while thinking is active — which was making `generate_structured_output` and `compress_context` fail intermittently. `_compress_context_impl` also gains a truncation fallback: if summary generation still fails after every retry, older messages are discarded instead of raising, so the agent keeps running with a reduced context. ([#2140](https://github.com/agentscope-ai/agentscope/pull/2140))
+
+### Fixed
+
+**Agent Service**
+
+- Bind a real workspace to a scheduled session. The session was persisted with `workspace_id=""`, which every workspace manager treated as a literal cache key rather than "unbound", so every scheduled session in a deployment — across all users and all agents — resolved to the same workspace: the same sandbox, files, `.mcp` config, and installed skills. ([#2410](https://github.com/agentscope-ai/agentscope/pull/2410))
+- Stop stranding session inbox payloads until the next user turn. A scheduled prompt, a team message, a new worker's first task, or a background tool result could sit unconsumed because producers inferred from the run lock whether a live run would drain it, and a run holding the lock while it unwinds has already drained for the last time. A run now registers as its inbox's consumer, and the hand-off is made explicit under a short lock, so a wake-up is produced exactly when nobody is registered — never dropping a payload, never spawning an empty turn. ([#2295](https://github.com/agentscope-ai/agentscope/pull/2295))
+- Load the session state, assemble the agent, and check the parked state inside the distributed session lock, so a waiting run no longer reads and re-persists state left over from the run before it. ([#2232](https://github.com/agentscope-ai/agentscope/pull/2232))
+
+**Tool**
+
+- `Bash` picks the shell from the backend's OS instead of the host's, so a Windows host driving a Linux sandbox no longer sends `cmd /c` into the container. ([#2366](https://github.com/agentscope-ai/agentscope/pull/2366))
+- Resolve PEP 563 lazy annotations when extracting a tool schema, so a module using `from __future__ import annotations` no longer yields string-typed parameters. ([#2371](https://github.com/agentscope-ai/agentscope/pull/2371))
+
+**MCP**
+
+- A stateful client can reconnect: `close()` clears the exhausted single-use transport and the next `connect()` builds a new one, instead of reusing the spent one and failing. ([#2308](https://github.com/agentscope-ai/agentscope/pull/2308))
+
+**RAG**
+
+- Qdrant and Milvus write chunks under deterministic ids, so an index-worker retry after a mid-pipeline crash overwrites the partial ingest instead of leaving two copies of every chunk. ([#2372](https://github.com/agentscope-ai/agentscope/pull/2372))
+
+**Agent**
+
+- Keep prompt-cache tokens in the reported usage. ([#2318](https://github.com/agentscope-ai/agentscope/pull/2318))
+
 ## v2.0.6
 
 *Released on 2026-08-07.*
