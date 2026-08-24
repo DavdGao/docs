@@ -7,7 +7,7 @@ description: "让 AgentScope 服务中的智能体入驻 IM 平台。"
 
 AgentScope 服务中的渠道目前支持以下能力：
 
-- 在飞书、Discord 等 IM 平台上接收用户消息并回复；
+- 在飞书、钉钉、Discord 等 IM 平台上接收用户消息并回复；
 - 主动向指定的 IM 平台推送消息；
 - 通过路由规则，把消息分配给不同的智能体与会话；
 - 收发图片、文件等多模态内容；
@@ -22,7 +22,7 @@ AgentScope 服务中的渠道目前支持以下能力：
 |---|---|---|---|
 | 飞书（Lark） | `feishu` | WebSocket 长连接 | 可用 |
 | Discord | `discord` | Gateway WebSocket | 可用 |
-| 钉钉 | `dingtalk` | Stream 模式 | Coming soon |
+| 钉钉 | `dingtalk` | Stream 模式长连接 | 可用 |
 | 企业微信 | `wecom` | 应用回调 | Coming soon |
 
 <Tip>
@@ -35,13 +35,18 @@ AgentScope 服务中的渠道目前支持以下能力：
 
 ```python 启用内置渠道
 from agentscope.app import create_app
-from agentscope.app.channel import DiscordChannel, FeishuChannel
+from agentscope.app.channel import (
+    DingTalkChannel,
+    DiscordChannel,
+    FeishuChannel,
+)
 
 app = create_app(
     storage=...,
     message_bus=...,
     workspace_manager=...,
-    channels=[FeishuChannel, DiscordChannel],  # 允许接入的渠道类型
+    # 允许接入的渠道类型
+    channels=[FeishuChannel, DingTalkChannel, DiscordChannel],
 )
 ```
 
@@ -81,6 +86,9 @@ app = create_app(
   </Card>
   <Card title="接入飞书" icon="comment" href="/versions/2.0.7dev/zh/deploy/channel/feishu" cta="查看详情" arrow>
     创建飞书机器人，让智能体在飞书里收发消息。
+  </Card>
+  <Card title="接入钉钉" icon="comments" href="/versions/2.0.7dev/zh/deploy/channel/dingtalk" cta="查看详情" arrow>
+    创建钉钉机器人，让智能体在钉钉里收发消息。
   </Card>
   <Card title="接入 Discord" icon="discord" href="/versions/2.0.7dev/zh/deploy/channel/discord" cta="查看详情" arrow>
     创建 Discord Bot，让智能体在 Discord 里收发消息。
