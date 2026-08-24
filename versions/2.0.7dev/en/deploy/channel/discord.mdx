@@ -19,7 +19,7 @@ The Discord channel depends on `discord.py`, installed with the `channel` extra:
 pip install "agentscope[channel]"
 ```
 
-## Create the bot
+## Create Bot
 
 Create and configure the bot on the [Discord Developer Portal](https://discord.com/developers/applications).
 
@@ -38,7 +38,7 @@ Create and configure the bot on the [Discord Developer Portal](https://discord.c
   </Step>
 </Steps>
 
-## Start the agent service
+## Start Agent Service
 
 A channel runs on top of an [agent service](/versions/2.0.7dev/en/deploy/agent-service). Start the service with `create_app` and declare the accepted channel types via `channels`. Channels depend on a message bus (`message_bus`); use `InMemoryMessageBus` for single-machine development, and switch to `RedisMessageBus` for multi-process or multi-node deployment.
 
@@ -60,7 +60,7 @@ app = create_app(
 # uvicorn.run(app, host="0.0.0.0", port=8000)
 ```
 
-## Add the channel
+## Add Channel
 
 In the management UI (see the sample frontend [`examples/web_ui`](https://github.com/agentscope-ai/agentscope/tree/main/examples/web_ui)), add a channel through a visual form, with no config to write by hand.
 
@@ -72,7 +72,7 @@ In the management UI (see the sample frontend [`examples/web_ui`](https://github
     Enter the **Application ID** and **Bot Token** from the previous step into the credential form.
   </Step>
   <Step title="Configure routing rules">
-    Choose which agent handles messages and how sessions are scoped. See [Message routing](/versions/2.0.7dev/en/deploy/channel/routing) for what the rules mean.
+    Choose which agent handles messages and how sessions are scoped. See [Message Routing](/versions/2.0.7dev/en/deploy/channel/routing) for what the rules mean.
   </Step>
   <Step title="Save and enable">
     Save and enable the channel; the service connects to Discord immediately and the bot comes online. @mention it in a server channel, or DM it, to begin.
@@ -83,7 +83,7 @@ In the management UI (see the sample frontend [`examples/web_ui`](https://github
 The management UI maps onto the `/channels` endpoints; call them directly when you need to create channels programmatically. See the [API](/versions/2.0.7dev/en/deploy/openapi.json) part of this chapter for the fields.
 </Note>
 
-## Platform config
+## Platform Config
 
 The Discord channel has a few platform-specific switches:
 
@@ -97,19 +97,19 @@ The Discord channel has a few platform-specific switches:
 When routing on `chat_type`, a server channel's value is `guild` and a DM's is `dm`.
 </Note>
 
-## Verify and troubleshoot
+## Verify and Troubleshoot
 
 - Check the channel status in the management UI, or call `GET /channels/{id}/status` to confirm the connection is established.
 - If the bot doesn't respond in a server channel, first confirm **MESSAGE CONTENT INTENT** is enabled, then check `only_at_reply` and the @-mention behavior.
 - If the bot never comes online, check the Bot Token and that it has been invited to the server.
 
-## Further reading
+## Further Reading
 
 <CardGroup cols={2}>
-  <Card title="Message routing" icon="route" href="/versions/2.0.7dev/en/deploy/channel/routing" cta="Learn more" arrow>
+  <Card title="Message Routing" icon="route" href="/versions/2.0.7dev/en/deploy/channel/routing" cta="Learn more" arrow>
     Route different server channels to different agents.
   </Card>
-  <Card title="Custom channel" icon="puzzle-piece" href="/versions/2.0.7dev/en/deploy/channel/custom" cta="Learn more" arrow>
+  <Card title="Custom Channel" icon="puzzle-piece" href="/versions/2.0.7dev/en/deploy/channel/custom" cta="Learn more" arrow>
     Connect a platform beyond the built-ins.
   </Card>
 </CardGroup>

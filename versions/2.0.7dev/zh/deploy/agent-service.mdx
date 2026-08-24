@@ -17,7 +17,7 @@ description: "把智能体部署为多租户、多会话的 HTTP 服务"
 | 能力                                                | 说明                                                                                      |
 |---------------------------------------------------|-----------------------------------------------------------------------------------------|
 | 智能体团队（Agent Team）                                 | Leader 智能体派生 worker 智能体，并通过内置 team 工具协调它们；详见 [Agent Team](/versions/2.0.7dev/zh/deploy/agent-team) 章节。 |
-| 工作区管理                                             | 可配置的工作区隔离粒度 —— `per_agent`（默认）、`per_session` 或 `per_user` —— 管理智能体的文件系统、MCP client 与 skill。 |
+| 工作区管理                                             | 文件系统可按 `per_agent`（默认）、`per_session` 或 `per_user` 分配；共享工作区中的 MCP 仍按智能体+会话隔离，skill 按智能体隔离。 |
 | 知识库（RAG）                                          | 可选的内置知识库服务，支持文档摄取、切片、embedding 与自然语言检索 —— 向 `create_app` 传入 `knowledge_base_manager` 即可启用。 |
 | 后台任务卸载（Background Task Offloading）                | 长耗时工具调用切到后台执行，完成时通过会话事件流回送结果。                                                           |
 | Cron 调度                                           | 按时间触发智能体执行，支持有状态或无状态会话；调度持久化保存，跨重启生效。                                                   |
@@ -194,8 +194,8 @@ uvicorn.run(app, host="0.0.0.0", port=8000)
 <ParamField path="knowledge_parsers" type="list[ParserBase] | dict[str, ParserBase] | None" default="None">
   为知识库文档上传注册的 parser。传入**列表**时，服务按每个 parser 的 `supported_media_types` 路由（同类型下后注册者会覆盖前者并伴随警告）；传入**字典** `media_type → parser` 时按显式映射路由。设置了 `knowledge_base_manager` 时默认为 `[TextParser()]`。
 </ParamField>
-<ParamField path="knowledge_chunker" type="ChunkerBase | None" default="None">
-  所有知识库共享的切片器。设置了 `knowledge_base_manager` 时默认为 `ApproxTokenChunker()`。
+<ParamField path="knowledge_chunkers" type="list[type[ChunkerBase]] | None" default="None">
+  用户创建知识库时可选的切块器类。切块器类型与参数保存在知识库记录中，索引 worker 会按 Schema 重建实例。设置了 `knowledge_base_manager` 时默认为 `[ApproxTokenChunker]`。
 </ParamField>
 <ParamField path="blob_store" type="BlobStoreBase | None" default="None">
   在上传端点与索引 worker 之间保存上传文档字节的后端。设置了 `knowledge_base_manager` 时必需；默认为 `LocalBlobStore(root_dir="./blobs")`。其生命周期由应用 lifespan 管理。
@@ -260,7 +260,7 @@ uvicorn.run(app, host="0.0.0.0", port=8000)
     ```
   </Step>
   <Step title="配置 MCP 与 skill（可选）">
-    若智能体需要超出内置范围的工具，向会话的工作区附加 MCP client 与 skill。开箱即用的情况下，每个智能体已经能访问工作区的内置工具（文件系统、shell、搜索……）、任务规划工具、调度与后台任务控制工具，以及 —— 当会话是团队 leader 或成员时 —— [Agent Team](/versions/2.0.7dev/zh/deploy/agent-team) 中描述的团队协调工具。通过 `create_app` 的 `extra_agent_tools` 传入的工具也会一并合入。
+    若智能体需要超出内置范围的工具，可为当前会话配置独立 MCP，并为当前智能体安装 skill。开箱即用的情况下，每个智能体已经能访问工作区的内置工具（文件系统、shell、搜索……）、任务规划工具、调度与后台任务控制工具，以及 —— 当会话是团队 leader 或成员时 —— [Agent Team](/versions/2.0.7dev/zh/deploy/agent-team) 中描述的团队协调工具。通过 `create_app` 的 `extra_agent_tools` 传入的工具也会一并合入。
 
     ```http
     POST /workspace/mcp
@@ -345,7 +345,7 @@ flowchart TB
 | **User** | 从请求中解析出的不透明租户标识。服务自身不建模用户系统；通过 `get_current_user_id` 接入自己的实现。 |
 | **Credential** | 某个模型 provider 的连接配置 —— 一个 API key 加上 provider 特有设置。可在多个智能体与会话间复用。 |
 | **Agent** | 展示名、system prompt 与运行时配置（context、ReAct 循环）。可复用的模板 —— 身份属于智能体，运行时状态属于会话。 |
-| **Workspace** | 智能体的运行时环境 —— 工作目录、MCP client、skill、卸载的上下文。工作区如何映射到 user / agent / session 由工作区管理器决定。 |
+| **Workspace** | 智能体的运行时环境 —— 工作目录、MCP client、skill、卸载的上下文。工作区映射策略决定文件系统的共享粒度；MCP 和 skill 在工作区内还会分别按会话和智能体隔离。 |
 | **Session** | 用户与智能体之间一次正在进行的会话。承载智能体状态（工作记忆、未完成的 reply、permission context）、持久化消息记录，以及该会话运行所用的 LLM 配置。 |
 | **Schedule** | 按 cron 表达式触发智能体。每次触发都在一个会话内运行 —— 可以每次新建（无状态），也可以复用以让上下文跨次累积（有状态）。Schedule 可在重启后保留。 |
 | **MessageBus** | Redis 支撑的运行时层 —— 会话锁、回放日志、收件箱队列、唤醒信号。是调度触发、团队消息与后台工具完成抵达空闲会话的唯一投递通道；也是支撑多进程运行的基础。 |
@@ -372,8 +372,8 @@ flowchart TB
 | Models | `GET /model?provider=<name>` | 列出某 provider 下的候选聊天模型，附带声明式 `ModelCard`（能力与参数 schema）。 |
 | TTS models | `GET /tts-model?provider=<name>` | 列出某支持 TTS 的 provider 下的候选语音合成模型。 |
 | Schedules | `GET/POST/PATCH/DELETE /schedule`、`GET /schedule/{id}/sessions` | 管理 cron 触发的智能体执行，有状态或无状态。 |
-| Workspace MCPs | `GET/POST /workspace/mcp`、`DELETE /workspace/mcp/{mcp_name}` | 管理挂在会话工作区上的 MCP client。每条返回项包含实时的工具列表与健康状态。 |
-| Workspace skills | `GET/POST /workspace/skill`、`DELETE /workspace/skill/{skill_name}` | 管理会话工作区中可用的 skill。 |
+| Workspace MCPs | `GET/POST /workspace/mcp`、`DELETE /workspace/mcp/{mcp_name}` | 管理当前智能体+会话的 MCP client。每条返回项包含实时的工具列表与健康状态。 |
+| Workspace skills | `GET/POST /workspace/skill`、`DELETE /workspace/skill/{skill_name}` | 管理当前智能体的 skill 分区。 |
 | Knowledge bases | `GET/POST/PATCH/DELETE /knowledge_bases` | 知识库的 CRUD。仅当向 `create_app` 传入 `knowledge_base_manager` 时启用。 |
 | KB documents | `GET/POST /knowledge_bases/{id}/documents`、`GET /knowledge_bases/{id}/documents/status`、`DELETE /knowledge_bases/{id}/documents/{doc_id}` | 在知识库中上传、列出、删除文档，并批量查询索引状态。 |
 | KB search | `POST /knowledge_bases/{id}/search` | 对某个知识库执行自然语言检索。 |
@@ -471,6 +471,10 @@ app.dependency_overrides[default_dependency] = get_current_user_id
 
 - **工作区后端** —— 智能体实际运行所在的运行时环境。内置实现包括 `LocalWorkspace`、`DockerWorkspace`、`E2BWorkspace`。新增后端实现工作区接口即可，可包装容器镜像、沙箱或远端虚拟机。
 - **隔离策略** —— 工作区如何映射到 user、agent、session。内置 `LocalWorkspaceManager` 以 `agent_id` 为键：同一智能体的所有会话共享一个工作区。要切换为按 user 或按 session 隔离，继承 `WorkspaceManagerBase` 并按自己的键策略覆写 `get_workspace`。
+
+<Note>
+该策略决定工作目录和卸载文件的共享范围，不会取消资源内部隔离：MCP 连接仍按 `agent_id + session_id` 独立，skill 仍按 `agent_id` 存放在独立分区。
+</Note>
 
 ```python
 from agentscope.app.workspace_manager import WorkspaceManagerBase
@@ -793,4 +797,3 @@ Router 通过 FastAPI 的 `Depends()` 拿到应用状态。标准注入项（位
     上下文压缩与工作区 offloading
   </Card>
 </CardGroup>
-

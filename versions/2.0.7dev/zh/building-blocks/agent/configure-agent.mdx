@@ -70,6 +70,7 @@ agent = Agent(
         trigger_ratio=0.7,       # 使用 70% 上下文时触发压缩
         reserve_ratio=0.2,       # 压缩后保留最近 20% 的内容
         tool_result_limit=1000,  # 工具结果超过 1000 token 时截断
+        max_image_num=5,         # 只保留最近 5 张图片
     ),
 )
 ```
@@ -111,7 +112,7 @@ agent = Agent(
 | `offloader` | `Offloader \| None` | `None` | 卸载压缩后的上下文与工具结果，需实现 `Offloader` 协议 |
 | `middlewares` | `list[MiddlewareBase] \| None` | `None` | 应用于回复、推理、行动、模型调用和系统提示词等钩子 |
 | `model_config` | `ModelConfig` | 默认值 | 重试次数和备用模型 |
-| `context_config` | `ContextConfig` | 默认值 | 上下文压缩阈值和工具结果长度限制 |
+| `context_config` | `ContextConfig` | 默认值 | 上下文压缩阈值、图片数量和工具结果长度限制 |
 | `injection_config` | `InjectionConfig` | 默认值 | 运行时状态注入：时间、任务与上下文用量（参见[感知环境](/versions/2.0.7dev/zh/building-blocks/context/environment-awareness)） |
 | `react_config` | `ReActConfig` | 默认值 | 最大迭代次数、结构化输出宽限迭代次数和拒绝处理方式 |
 

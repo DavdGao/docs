@@ -22,6 +22,7 @@ agent = Agent(
         trigger_ratio=0.8,
         reserve_ratio=0.1,
         tool_result_limit=3000,
+        max_image_num=5,
     ),
 )
 ```
@@ -33,6 +34,7 @@ Available fields:
 | `trigger_ratio`      | `float`         | Compression activates when token usage exceeds this ratio of the model's context size (capped at `0.9`)            |
 | `reserve_ratio`      | `float`         | Proportion of context tokens kept as recent messages after compression                                            |
 | `tool_result_limit`  | `int`           | Maximum tokens per tool result; outputs exceeding this are truncated                                              |
+| `max_image_num`      | `int`           | Maximum number of images kept in the context, `5` by default                                                      |
 | `compression_prompt` | `str`           | The prompt that guides the model to generate the summary                                                          |
 | `summary_template`   | `str`           | String template for formatting the summary into the context                                                       |
 | `summary_schema`     | `dict`          | JSON Schema constraining the model's structured summary output                                                    |
@@ -89,6 +91,15 @@ await agent.compress_context(
 ```
 
 The method is a no-op when token usage is below `trigger_ratio × context_size`, so it is safe to call between turns or at any custom checkpoint.
+
+## Limit Images
+
+`max_image_num` prevents images from accumulating in the model context over a long conversation. Once the count exceeds the limit, AgentScope removes images starting from the oldest and leaves a hint in their place:
+
+- If the agent is configured with an `offloader`, the image is persisted first and the hint carries the path for re-reading it;
+- Without an `offloader`, the image is dropped and the hint only records that it was removed by the image limit.
+
+Set `max_image_num=0` to keep no images in the model context at all.
 
 ## Truncate Tool Results
 

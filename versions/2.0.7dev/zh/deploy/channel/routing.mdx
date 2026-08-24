@@ -18,7 +18,7 @@ description: "决定 IM 平台来的消息交给哪个智能体、进入哪个�
 | `agent_id` | 命中后交给哪个智能体 | 必填 |
 | `session_scope` | 命中后这条消息进入哪个会话，取值见下节 | `per_chat` |
 
-`match_value` 是**精确匹配**（不是前缀，也不是正则），只有 `"*"` 例外，它匹配一切。当 `match_key` 指向 `metadata` 里的键时，可匹配的值由平台决定，例如飞书的 `chat_type` 取值为 `group` / `p2p`，Discord 为 `guild` / `dm`，详见各平台接入页。
+`match_value` 是**精确匹配**（不是前缀，也不是正则），只有 `"*"` 例外，它匹配一切。当 `match_key` 指向 `metadata` 里的键时，可匹配的值由平台决定，例如飞书的 `chat_type` 取值为 `group` / `p2p`，钉钉为 `group` / `private`，Discord 为 `guild` / `dm`，详见各平台接入页。
 
 ## 会话划分
 

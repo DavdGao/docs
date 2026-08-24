@@ -133,7 +133,7 @@ pwsh = PowerShell(cwd="C:\\Users\\me\\project")
 
 | 工具 | 操作 | 关键行为 |
 |------|------|----------|
-| `Read` | 读取文件内容 | 返回带行号的内容；支持 offset / limit 处理大文件；结果缓存在 `agent.state` |
+| `Read` | 读取文件内容 | 文本返回带行号的内容；图片和 PDF 可按模型能力返回 `DataBlock` |
 | `Write` | 创建或覆写文件 | 文件已存在但未被读取过则失败 |
 | `Edit` | 替换文件中的精确字符串 | `old_string` 找不到或不唯一时失败（除非 `replace_all=True`）；要求先读取 |
 
@@ -144,6 +144,19 @@ pwsh = PowerShell(cwd="C:\\Users\\me\\project")
 3. **PASSTHROUGH**：交给权限引擎做规则匹配
 
 `Read` 是只读工具，始终返回 PASSTHROUGH（EXPLORE 与 ACCEPT_EDITS 模式下的自动放行由引擎通过 `check_read_only` 处理）。
+
+`Read` 会按文件类型选择返回形式：
+
+- 文本文件使用 `offset` / `limit` 分页，返回带行号的 `TextBlock`；
+- 模型支持的图片类型以 Base64 `DataBlock` 返回；
+- PDF 在模型支持 `application/pdf` 时以 `DataBlock` 返回，否则在本地提取文本。超过 10 页时必须传入 `pages="1-5"` 之类的范围，单次最多读取 20 页。
+
+可将模型卡片中的输入类型直接交给 `Read`，使工具只返回下游模型能处理的多模态内容：
+
+```python
+read = Read(model_input_types=model_card.input_types)
+result = await read(file_path="/workspace/report.pdf", pages="1-5")
+```
 
 `match_rule()`：三个工具都使用 `fnmatch` 对 `file_path` 参数做 glob 匹配：
 
@@ -278,9 +291,32 @@ toolkit = Toolkit(tools=[FunctionTool(get_weather)])
 | `func` | `Callable` | 待包装的 Python 函数 |
 | `name` | `str \| None` | 覆盖工具名（默认取 `func.__name__`） |
 | `description` | `str \| None` | 覆盖描述（默认取 docstring） |
+| `input_schema` | `dict \| type[BaseModel] \| None` | 显式指定 JSON Schema 或 Pydantic 参数模型；不传时从函数注解推导 |
 | `is_concurrency_safe` | `bool` | 是否可并发调用（默认 `True`） |
 | `is_read_only` | `bool` | 是否无副作用（默认 `False`） |
 | `is_state_injected` | `bool` | 是否通过 `_agent_state` 注入智能体状态数据（默认 `False`） |
+
+需要枚举、数值范围或复杂结构时，可直接传入 Pydantic 模型：
+
+```python
+from pydantic import BaseModel, Field
+
+
+class WeatherInput(BaseModel):
+    city: str
+    days: int = Field(default=1, ge=1, le=7)
+
+
+def get_forecast(city: str, days: int = 1) -> str:
+    return f"{city} 未来 {days} 天天气晴朗"
+
+
+weather_tool = FunctionTool(get_forecast, input_schema=WeatherInput)
+```
+
+<Note>
+`FunctionTool` 也会解析 `from __future__ import annotations` 产生的延迟注解。如果自动推导无法表达所需约束，优先使用 `input_schema`。
+</Note>
 
 <Note>
 被包装的函数默认走 `ASK` 权限行为：用户必须为每次调用显式放行。需要自定义权限逻辑时，请直接继承 `ToolBase`。

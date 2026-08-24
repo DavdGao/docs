@@ -7,7 +7,7 @@ A workspace's resources are not fixed at creation time. MCP servers and skills c
 
 ## Manage MCP Servers
 
-`add_mcp` registers a new MCP server and `remove_mcp` deregisters one by name. Changes are written to the `.mcp` file under the workspace directory, so a restarted workspace reconnects the same servers without re-seeding:
+MCP declarations are isolated by `agent_id + session_id`. Even when several sessions share one workspace, the connections, cookies and login state of a stateful MCP never leak into another session. The client is only connected the first time that session calls `list_mcps`:
 
 ```python
 from agentscope.mcp import MCPClient, HttpMCPConfig
@@ -19,13 +19,22 @@ await workspace.add_mcp(
         is_stateful=False,
         mcp_config=HttpMCPConfig(url="https://mcp.amap.com/mcp?key=..."),
     ),
+    agent_id="coder",
+    session_id="session-1",
 )
 
 # Deregister by name; unknown names log a warning and return silently
-await workspace.remove_mcp("amap")
+await workspace.remove_mcp(
+    "amap",
+    agent_id="coder",
+    session_id="session-1",
+)
 
 # Enumerate the currently registered clients
-mcps = await workspace.list_mcps()
+mcps = await workspace.list_mcps(
+    agent_id="coder",
+    session_id="session-1",
+)
 ```
 
 <Note>
@@ -34,18 +43,18 @@ Persistence follows the workspace's own model: an ephemeral `DockerWorkspace` wi
 
 ## Manage Skills
 
-`add_skill` copies a local skill directory (which must contain a `SKILL.md`) into the workspace's `skills/` directory, packaging it as a tar archive so the copy works the same against a local directory or a remote sandbox. `remove_skill` deletes a skill by its agent-facing name (the `name` field in the `SKILL.md` front matter):
+Skills are isolated by `agent_id`. `skill_paths` first populates the `skills/.seed` template; the workspace creates a private partition for an agent the first time it accesses skills. `add_skill`, `remove_skill` and `list_skills` only operate on the given agent's partition:
 
 ```python
 # Copy a local skill directory into the workspace;
 # raises ValueError if SKILL.md is missing or the directory already exists
-await workspace.add_skill("./skills/web-search")
+await workspace.add_skill("./skills/web-search", agent_id="coder")
 
 # Delete by the skill's front-matter name; raises KeyError if not found
-await workspace.remove_skill("web-search")
+await workspace.remove_skill("web-search", agent_id="coder")
 
 # Enumerate the available skills (parsed from each SKILL.md)
-skills = await workspace.list_skills()
+skills = await workspace.list_skills(agent_id="coder")
 ```
 
 ## Manage the Lifecycle
@@ -54,7 +63,7 @@ Three methods take a workspace through its life, and the `async with` protocol w
 
 | Method | Effect |
 |--------|--------|
-| `initialize()` | Provision the backend (start the container / sandbox / Pod), connect MCP servers, and seed skills |
+| `initialize()` | Provision the backend (start the container / sandbox / Pod), restore MCP declarations, and prepare the skill seed |
 | `reset()` | Return the workspace to an empty state: close and remove all MCPs, delete all skills, and wipe per-session state |
 | `close()` | Release all resources and connections |
 
@@ -64,7 +73,7 @@ async with LocalWorkspace(workdir="./ws") as workspace:
 ```
 
 <Warning>
-`reset()` empties the workspace; it does not restore the initial state. The constructor-time `default_mcps` and `skill_paths` seeds are **not** re-applied.
+`reset()` deletes the MCP declarations, skill partitions and session state of every session. Afterwards, a session inherits `default_mcps` again the next time it accesses MCPs, but `skill_paths` is **not** re-seeded.
 </Warning>
 
 ## Allocate Workspaces in a Service

@@ -21,6 +21,7 @@ agent = Agent(
         trigger_ratio=0.8,
         reserve_ratio=0.1,
         tool_result_limit=3000,
+        max_image_num=5,
     ),
 )
 ```
@@ -32,6 +33,7 @@ agent = Agent(
 | `trigger_ratio`      | `float`   | 当 token 用量超过该比例 × 模型上下文长度时触发压缩（上限 `0.9`）             |
 | `reserve_ratio`      | `float`   | 压缩后作为最近消息保留的上下文 token 比例                                  |
 | `tool_result_limit`  | `int`     | 单条工具结果的最大 token 数，超出则截断                                    |
+| `max_image_num`      | `int`     | 上下文中保留的最大图片数，默认为 `5`                                 |
 | `compression_prompt` | `str`     | 引导模型生成摘要的提示词                                                   |
 | `summary_template`   | `str`     | 把摘要拼回上下文时使用的字符串模板                                         |
 | `summary_schema`     | `dict`    | 约束模型结构化摘要输出的 JSON Schema                                       |
@@ -88,6 +90,15 @@ await agent.compress_context(
 ```
 
 当 token 用量低于 `trigger_ratio × context_size` 时该方法为空操作，因此可以安全地在轮次之间或自定义检查点处随时调用。
+
+## 限制图片数量
+
+`max_image_num` 用来避免长对话中的图片持续占用模型上下文。当图片数超过上限时，AgentScope 从最早的图片开始移除，并在原位置留下提示：
+
+- 如果 Agent 配置了 `offloader`，图片会先持久化，提示中包含可重新读取的路径；
+- 没有 `offloader` 时，图片会被丢弃，提示只记录其已因数量限制被移除。
+
+`max_image_num=0` 表示不在模型上下文中保留图片。
 
 ## 截断工具结果
 

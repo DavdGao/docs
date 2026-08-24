@@ -66,7 +66,7 @@ The steps below bring the RAG service up â€” backend + the official front-end â€
             PPTParser(),
             ImageParser(),
         ],
-        knowledge_chunker=ApproxTokenChunker(chunk_size=512, overlap=50),
+        knowledge_chunkers=[ApproxTokenChunker],
         blob_store=LocalBlobStore(root_dir="/data/blobs"),
     )
 
@@ -112,7 +112,7 @@ The steps below bring the RAG service up â€” backend + the official front-end â€
             PPTParser(),
             ImageParser(),
         ],
-        knowledge_chunker=ApproxTokenChunker(chunk_size=512, overlap=50),
+        knowledge_chunkers=[ApproxTokenChunker],
         blob_store=S3BlobStore(bucket="my-rag-bucket"),
     )
 
@@ -129,8 +129,8 @@ The steps below bring the RAG service up â€” backend + the official front-end â€
     <ParamField path="knowledge_parsers" type="list[ParserBase] | dict[str, ParserBase] | None" default="[TextParser()]">
       Parsers registered to the upload path, dispatched by each parser's `supported_media_types`. In `list` form, later registrations override earlier ones for overlapping types (overrides log a warning); `dict` form `media_type â†’ parser` is verbatim explicit routing (useful for binding one parser to multiple types or to custom aliases).
     </ParamField>
-    <ParamField path="knowledge_chunker" type="ChunkerBase | None" default="ApproxTokenChunker()">
-      The chunker shared across every knowledge base. In production, tune `chunk_size` and `overlap` to fit the embedding model's context window.
+    <ParamField path="knowledge_chunkers" type="list[type[ChunkerBase]] | None" default="[ApproxTokenChunker]">
+      The chunker classes users can choose from. Each knowledge base stores its own `chunker_type` plus parameters validated against the `Parameters` schema, and the indexing worker rebuilds the instance from that configuration.
     </ParamField>
     <ParamField path="blob_store" type="BlobStoreBase | None" default="LocalBlobStore('./blobs')">
       Binary store for uploaded files. Local is fine for single-host setups; in a distributed deployment use S3 or a custom shared backend, because workers must share the same file source as the API.
@@ -254,7 +254,7 @@ async def main() -> None:
             PPTParser(),
             ImageParser(),
         ],
-        chunker=ApproxTokenChunker(),
+        chunkers=[ApproxTokenChunker],
         worker_max_concurrency=4,   # max documents this worker processes concurrently
         consumer_max_batch=32,      # max entries pulled per bus signal
     )
@@ -302,7 +302,7 @@ def bootstrap() -> dict:
             PPTParser(),
             ImageParser(),
         ],
-        "chunker": ApproxTokenChunker(),
+        "chunkers": [ApproxTokenChunker],
     }
 ```
 
@@ -411,6 +411,7 @@ The service exposes a full set of CRUD + upload + search endpoints under the `/k
 |------|------|------|
 | Capability discovery | `GET /knowledge_bases/embedding_models` | Lists embedding models compatible with the vector store's dimension policy under the current user's credentials |
 | Capability discovery | `GET /knowledge_bases/supported_content_types` | Lists IANA media types and file extensions supported by the parsers currently mounted on the API; the front-end uses this for `<input accept>` |
+| Capability discovery | `GET /knowledge_bases/chunkers` | Lists the available chunkers and the JSON Schema of their `Parameters` |
 | Capability discovery | `GET /knowledge_bases/middleware/parameters_schema` | Returns the JSON Schema of `RAGMiddleware.Parameters`; the front-end uses this for a dynamic form |
 | Knowledge base CRUD | `POST/GET/PATCH/DELETE /knowledge_bases` | Create / read / update / delete knowledge bases; deletion cascades through the collection, document records, and blobs |
 | Document management | `GET/POST/DELETE /knowledge_bases/{kb_id}/documents` | List / upload / delete documents; uploads return immediately with `pending` |

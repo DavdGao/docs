@@ -45,6 +45,19 @@ PDF、PPT、Word、Excel 解析依赖额外的第三方库，可以通过 `pip i
 | `ApproxTokenChunker` | 按近似 Token 数进行切分，不依赖任何 tokenizer。<br/>近似策略：`len(text.encode("utf-8")) // 4`；多模态 `DataBlock` 整块透传不切分 |
 | 开发中 ... |  |
 
+切块器通过 Pydantic 参数模型声明可调项。例如，使用 `ApproxTokenChunker.Parameters` 配置切块大小与重叠：
+
+```python
+from agentscope.rag import ApproxTokenChunker
+
+chunker = ApproxTokenChunker(
+    parameters=ApproxTokenChunker.Parameters(
+        chunk_size=256,
+        overlap=32,
+    ),
+)
+```
+
 ### 嵌入模型
 
 请见[嵌入模型章节](/versions/2.0.7dev/zh/building-blocks/model/embedding)。
@@ -182,7 +195,12 @@ AgentScope 推荐通过**知识库句柄 `KnowledgeBase`** 作为入口使用 RA
     ```python
     from agentscope.rag import ApproxTokenChunker
 
-    chunker = ApproxTokenChunker(chunk_size=256, overlap=32)
+    chunker = ApproxTokenChunker(
+        parameters=ApproxTokenChunker.Parameters(
+            chunk_size=256,
+            overlap=32,
+        ),
+    )
     chunks = await chunker.chunk(sections)
     ```
   </Step>
@@ -486,13 +504,17 @@ class MyMarkdownParser(ParserBase):
 继承 `ChunkerBase`，实现 `async def chunk(sections)` 把若干 `Section` 切成入库的 `Chunk`。约定：不跨 `Section` 合并；多模态 `DataBlock` 整块透传；`chunk_index` 在结果内从 0 连续编号；`total_chunks` 在每个 chunk 上一致：
 
 ```python
+from pydantic import Field
+
 from agentscope.message import TextBlock
 from agentscope.rag import Chunk, ChunkerBase, Section
 
 
 class FixedCharChunker(ChunkerBase):
-    def __init__(self, chunk_size: int = 1000) -> None:
-        self._chunk_size = chunk_size
+    chunker_type = "fixed_char"
+
+    class Parameters(ChunkerBase.Parameters):
+        chunk_size: int = Field(default=1000, ge=1)
 
     async def chunk(self, sections: list[Section]) -> list[Chunk]:
         chunks: list[Chunk] = []
@@ -510,11 +532,13 @@ class FixedCharChunker(ChunkerBase):
                 )
                 continue
             text = section.content.text
-            for start in range(0, len(text), self._chunk_size):
+            for start in range(0, len(text), self.parameters.chunk_size):
                 chunks.append(
                     Chunk(
                         content=TextBlock(
-                            text=text[start : start + self._chunk_size],
+                            text=text[
+                                start : start + self.parameters.chunk_size
+                            ],
                         ),
                         source=section.source,
                         chunk_index=0,
@@ -528,6 +552,8 @@ class FixedCharChunker(ChunkerBase):
             chunk.total_chunks = len(chunks)
         return chunks
 ```
+
+`chunker_type` 用于持久化和重建切块器，同一应用内必须唯一；`Parameters` 的 JSON Schema 会直接用于服务端配置表单和参数校验。
 
 ### 自定义向量数据库
 

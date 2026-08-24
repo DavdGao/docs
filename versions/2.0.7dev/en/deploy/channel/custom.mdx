@@ -1,5 +1,5 @@
 ---
-title: "Custom channel"
+title: "Custom Channel"
 description: "Implement ChannelBase to connect a platform beyond the built-ins."
 ---
 
@@ -7,7 +7,7 @@ To connect a platform beyond the built-in Feishu and Discord, subclass `ChannelB
 
 A channel class does two things: **describe its type** (declare the type id, credentials, and config) and **implement its behavior** (keep the connection, normalize inbound messages and emit them, send replies back to the platform).
 
-## Type description
+## Type Description
 
 A channel class carries its type information on the class itself, so the framework renders the frontend form, validates input, and constructs instances from it, with no separate registry.
 
@@ -45,7 +45,7 @@ class MyChannel(ChannelBase):
 
 The framework builds every instance with a uniform `(channel_id, credentials, config)`: `credentials` and `config` are already validated against the `Credentials` / `Config` you declared. `Credentials` holds secrets (encrypted, redacted, immutable); `Config` holds non-secret switches (plaintext, updatable); users fill in both per channel in the management UI.
 
-## Required methods
+## Required Methods
 
 Besides the constructor, `ChannelBase` has three abstract methods you must implement; the rest have sensible defaults (a no-op or "not supported").
 
@@ -55,7 +55,7 @@ Besides the constructor, `ChannelBase` has three abstract methods you must imple
 | `start_listening(emit)` | Store `emit`, connect, and loop receiving; normalize each platform message into a `ChannelEvent` and `await self._emit(event)`. Include auto-reconnect, and release resources in a `finally` |
 | `send_response(event, events)` | Consume one run's agent event stream `events`, accumulate a reply, and send it back to the platform |
 
-## Receive messages
+## Receive Messages
 
 The framework calls `start_listening(emit)` when it starts the channel, passing in the inbound callback `emit`. The channel stores it as `self._emit`, normalizes each platform message into a `ChannelEvent`, and calls it; the framework handles the rest. A channel class neither holds nor imports the orchestration layer.
 
@@ -94,7 +94,7 @@ async def start_listening(self, emit: Emit) -> None:
 
 `ChannelEvent.content` reuses the same `TextBlock` / `DataBlock` types as `Msg.content`, so multimodal messages reach the agent with no extra conversion.
 
-## Send replies
+## Send Replies
 
 The framework doesn't hand the channel a finished reply; it hands `send_response` the run's **event stream** and lets the channel accumulate, render, and send. That way a channel can send one complete reply, or stream updates as Feishu does. The method has two parameters: `event` is the send target, used only for its `chat_id` to locate which chat to reply to; `events` is the agent event stream this run produces. The base class provides `_render()`, which folds an accumulated reply into deliverable text / data blocks and, per the channel's display switches, decides whether to include the thinking process and tool calls.
 
@@ -131,11 +131,11 @@ async def send_response(
 
 For a complete streaming and error-handling implementation, see the built-in `FeishuChannel` and `DiscordChannel`.
 
-## Connection status
+## Connection Status
 
 Each channel instance creates its own `self.status = ChannelStatus()` in `__init__` and updates `status.state` as it connects, reconnects, and stops (values `stopped` / `connecting` / `connected` / `retrying` / `failed`). This is exactly what the management UI and `GET /channels/{id}/status` read. If the first connection keeps failing, you can set `state` to `failed` and park, waiting for the user to change the config before reconnecting.
 
-## Capability declaration
+## Capability Declaration
 
 `capabilities` is the channel's declaration of what the platform supports, used by the framework and the channel itself when sending. Declare it truthfully for your platform:
 
@@ -163,7 +163,7 @@ class MyChannel(ChannelBase):
 | `streaming` | Whether a reply can be updated within a single message |
 | `max_message_length` | Per-message character cap; `_split_long_message()` splits by it automatically |
 
-## Tool confirmation
+## Tool Confirmation
 
 When an agent calls a tool that needs approval, the run pauses and a `RequireUserConfirmEvent` appears in the event stream. The channel recognizes it in `send_response` and presents the request to the user: capable platforms use an interactive card or buttons, and a plain-text platform can send a "reply yes/no" prompt. `RequireUserConfirmEvent.tool_calls` is the list of tools awaiting approval, each with `id`, `name`, and `input`.
 
@@ -205,7 +205,7 @@ async def _on_button_click(self, click) -> None:
 When you present the confirmation, the `event.metadata` that `send_response` received carries the run's `agent_id` and `session_id`. Include them in the `ChannelConfirmationResultEvent` so a click resumes exactly the session that asked for approval, with no need to re-match routing rules.
 </Tip>
 
-## Optional methods
+## Optional Methods
 
 These all have default implementations; override them per your platform's capabilities:
 
@@ -216,7 +216,7 @@ These all have default implementations; override them per your platform's capabi
 | `chat_kind()` / `chat_name()` | Return whether a chat is a group or a DM, and its name, to enrich the agent's session context |
 | `list_tools()` | Expose platform-specific tools to the agent (e.g. send a file to a specific user / group) |
 
-## Enable the channel
+## Enable Channel
 
 Add your channel class to `create_app`'s `channels`, and the service accepts that platform. `channels` declares **which channel types the whole service accepts**; omitting it enables none, so list the built-in types and your custom types together.
 
@@ -235,10 +235,10 @@ app = create_app(
 
 Once enabled, `MyChannel` shows up in the platform-type list of the management UI, and users can fill in credentials, configure routing, and create channels just like a built-in platform.
 
-## Further reading
+## Further Reading
 
 <CardGroup cols={2}>
-  <Card title="Message routing" icon="route" href="/versions/2.0.7dev/en/deploy/channel/routing" cta="Learn more" arrow>
+  <Card title="Message Routing" icon="route" href="/versions/2.0.7dev/en/deploy/channel/routing" cta="Learn more" arrow>
     Custom channels reuse the same routing model.
   </Card>
   <Card title="Overview" icon="circle-info" href="/versions/2.0.7dev/en/deploy/channel/overview" cta="Learn more" arrow>
