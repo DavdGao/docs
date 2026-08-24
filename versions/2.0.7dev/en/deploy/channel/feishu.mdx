@@ -20,7 +20,7 @@ The Feishu channel depends on `lark-oapi`, installed with the `channel` extra:
 pip install "agentscope[channel]"
 ```
 
-## Create the app
+## Create App
 
 Create and configure the bot on the [Feishu Open Platform](https://open.feishu.cn/); it takes a few minutes.
 
@@ -45,7 +45,7 @@ Create and configure the bot on the [Feishu Open Platform](https://open.feishu.c
   </Step>
 </Steps>
 
-## Start the agent service
+## Start Agent Service
 
 A channel runs on top of an [agent service](/versions/2.0.7dev/en/deploy/agent-service). Start the service with `create_app` and declare the accepted channel types via `channels`. Channels depend on a message bus (`message_bus`); use `InMemoryMessageBus` for single-machine development, and switch to `RedisMessageBus` for multi-process or multi-node deployment.
 
@@ -67,7 +67,7 @@ app = create_app(
 # uvicorn.run(app, host="0.0.0.0", port=8000)
 ```
 
-## Add the channel
+## Add Channel
 
 In the management UI (see the sample frontend [`examples/web_ui`](https://github.com/agentscope-ai/agentscope/tree/main/examples/web_ui)), add a channel through a visual form, with no config to write by hand.
 
@@ -79,7 +79,7 @@ In the management UI (see the sample frontend [`examples/web_ui`](https://github
     Enter the **App ID** and **App Secret** from the previous step into the credential form.
   </Step>
   <Step title="Configure routing rules">
-    Choose which agent handles messages and how sessions are scoped. See [Message routing](/versions/2.0.7dev/en/deploy/channel/routing) for what the rules mean.
+    Choose which agent handles messages and how sessions are scoped. See [Message Routing](/versions/2.0.7dev/en/deploy/channel/routing) for what the rules mean.
   </Step>
   <Step title="Save and enable">
     Save and enable the channel; the service opens the Feishu long connection immediately and the bot comes online. Add it to a group or start a DM to begin.
@@ -90,7 +90,7 @@ In the management UI (see the sample frontend [`examples/web_ui`](https://github
 The management UI maps onto the `/channels` endpoints; call them directly when you need to create channels programmatically. See the [API](/versions/2.0.7dev/en/deploy/openapi.json) part of this chapter for the fields.
 </Note>
 
-## Platform config
+## Platform Config
 
 The Feishu channel has a few platform-specific switches:
 
@@ -104,16 +104,16 @@ The Feishu channel has a few platform-specific switches:
 If you want the bot to join group discussions freely like any member, turn `only_at_reply` off; leaving it on (the default) keeps the bot from being too active in groups.
 </Tip>
 
-## Verify and troubleshoot
+## Verify and Troubleshoot
 
 - Check the channel status in the management UI, or call `GET /channels/{id}/status` to confirm the long connection is established.
 - If the bot doesn't respond in a group, first check `only_at_reply` and the @-mention behavior, then check that the message-receive permission was requested and published with the version.
 - If the bot never comes online, check the App ID / App Secret and that event subscription is set to the long-connection method.
 
-## Further reading
+## Further Reading
 
 <CardGroup cols={2}>
-  <Card title="Message routing" icon="route" href="/versions/2.0.7dev/en/deploy/channel/routing" cta="Learn more" arrow>
+  <Card title="Message Routing" icon="route" href="/versions/2.0.7dev/en/deploy/channel/routing" cta="Learn more" arrow>
     Route different groups to different agents.
   </Card>
   <Card title="Discord" icon="discord" href="/versions/2.0.7dev/en/deploy/channel/discord" cta="Learn more" arrow>

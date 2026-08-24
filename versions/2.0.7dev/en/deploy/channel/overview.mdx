@@ -14,7 +14,7 @@ Channels in an AgentScope service currently support:
 - Approving an agent's tool calls right inside the conversation;
 - Injecting channel context (platform, chat name, group vs. private) into the agent automatically, so replies fit the setting.
 
-## Supported platforms
+## Supported Platforms
 
 Each platform has a built-in type id (`channel_type`) that you pick when creating a channel:
 
@@ -29,7 +29,7 @@ Each platform has a built-in type id (`channel_type`) that you pick when creatin
 Within an agent service, call `GET /channels/types` to fetch every type and its credential form schema (JSON Schema); the frontend renders the config form from it, with no per-platform hard-coding.
 </Tip>
 
-## Enable channels
+## Enable Channels
 
 Channels start with the [agent service](/versions/2.0.7dev/en/deploy/agent-service). Declare which channel types the service accepts through the `channels` argument of `create_app`:
 
@@ -50,15 +50,15 @@ app = create_app(
 )
 ```
 
-Omitting `channels` enables no channel types and keeps the feature off. To connect a platform beyond the built-in ones, add your channel class to the list; see [Custom channel](/versions/2.0.7dev/en/deploy/channel/custom).
+Omitting `channels` enables no channel types and keeps the feature off. To connect a platform beyond the built-in ones, add your channel class to the list; see [Custom Channel](/versions/2.0.7dev/en/deploy/channel/custom).
 
-## Distributed deployment
+## Distributed Deployment
 
 Channels support distributed multi-node deployment. Shared state (channel config, sessions, the message bus) all lives in Redis, and the nodes run as equals, each handling its own requests; swap `storage` and `message_bus` for their Redis versions to scale out across machines.
 
 At the connection level, every deployment node keeps its own long connection for each enabled channel. The platform may deliver one message to several nodes, but only one node is allowed to collect and send the reply for a given session at a time, so users never get a duplicate answer.
 
-## HTTP endpoints
+## HTTP Endpoints
 
 A channel's full lifecycle is managed through the endpoints under `/channels`:
 
@@ -78,10 +78,10 @@ A channel's full lifecycle is managed through the endpoints under `/channels`:
 
 For each endpoint's full request and response fields, see the [API](/versions/2.0.7dev/en/deploy/openapi.json) part of this chapter.
 
-## Further reading
+## Further Reading
 
 <CardGroup cols={2}>
-  <Card title="Message routing" icon="route" href="/versions/2.0.7dev/en/deploy/channel/routing" cta="Learn more" arrow>
+  <Card title="Message Routing" icon="route" href="/versions/2.0.7dev/en/deploy/channel/routing" cta="Learn more" arrow>
     Decide which agent answers and which session a message joins.
   </Card>
   <Card title="Connect Feishu" icon="comment" href="/versions/2.0.7dev/en/deploy/channel/feishu" cta="Learn more" arrow>
@@ -93,7 +93,7 @@ For each endpoint's full request and response fields, see the [API](/versions/2.
   <Card title="Connect Discord" icon="discord" href="/versions/2.0.7dev/en/deploy/channel/discord" cta="Learn more" arrow>
     Create a Discord bot and let agents chat in Discord.
   </Card>
-  <Card title="Custom channel" icon="puzzle-piece" href="/versions/2.0.7dev/en/deploy/channel/custom" cta="Learn more" arrow>
+  <Card title="Custom Channel" icon="puzzle-piece" href="/versions/2.0.7dev/en/deploy/channel/custom" cta="Learn more" arrow>
     Implement ChannelBase to connect a platform beyond the built-ins.
   </Card>
 </CardGroup>

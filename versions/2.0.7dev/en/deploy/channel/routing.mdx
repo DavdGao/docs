@@ -1,5 +1,5 @@
 ---
-title: "Message routing"
+title: "Message Routing"
 description: "Decide which agent answers an incoming message and which session it joins."
 ---
 
@@ -7,7 +7,7 @@ Routing decides: for a message arriving from an IM platform, which agent handles
 
 Because in a channel both chats and users only show up with their first message: the first time anyone DMs the bot, it brings a chat that was never seen before. So routing is not a lookup table written in advance, but an ordered list of rules, matched top to bottom, first match wins, with a catch-all rule to guarantee every message has a definite destination.
 
-## Routing rules
+## Routing Rules
 
 A routing rule (binding) has four fields: the first two say "which messages to match", the last two say "what to do on a match".
 
@@ -20,7 +20,7 @@ A routing rule (binding) has four fields: the first two say "which messages to m
 
 `match_value` is an **exact match** (not a prefix, not a regex); only `"*"` is special and matches everything. When `match_key` points at a key in `metadata`, the matchable values are platform-defined: Feishu's `chat_type` is `group` / `p2p`, DingTalk's is `group` / `private`, Discord's is `guild` / `dm`; see each platform's page.
 
-## Session scope
+## Session Scope
 
 `session_scope` decides how messages that hit the same rule are grouped into sessions. Messages in the same session share context.
 
@@ -31,7 +31,7 @@ A routing rule (binding) has four fields: the first two say "which messages to m
 
 Even when they resolve to the same agent, `per_chat` and `per_chat_user` put messages into different sessions. So **after you change the scope, later messages are regrouped under the new scheme**. Different agents never share a session.
 
-## Match order
+## Match Order
 
 Rules are matched top to bottom, **first match wins**, the same way firewall rules or Nginx `location` blocks work. Put specific exceptions first and the catch-all last.
 
@@ -43,7 +43,7 @@ Saving a config runs three checks so that every message has a definite, unique d
 - Duplicate `(match_key, match_value)` combinations are not allowed.
 </Warning>
 
-## A full example
+## Full Example
 
 Suppose you've deployed two agents: a general assistant `friday` and a product expert `product-expert`. Let's follow one real message and see which agent and session it lands in under different rules.
 
@@ -151,7 +151,7 @@ Suppose you've deployed two agents: a general assistant `friday` and a product e
 Before configuring routing, call `GET /channels/{id}/chat_ids` to list the chats the bot knows and their `chat_id`; copy them directly instead of transcribing platform IDs by hand.
 </Tip>
 
-## Further reading
+## Further Reading
 
 <CardGroup cols={2}>
   <Card title="Connect Feishu" icon="comment" href="/versions/2.0.7dev/en/deploy/channel/feishu" cta="Learn more" arrow>

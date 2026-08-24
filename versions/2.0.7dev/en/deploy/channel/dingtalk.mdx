@@ -20,7 +20,7 @@ The DingTalk channel depends on `dingtalk-stream`, installed with the `channel` 
 pip install "agentscope[channel]"
 ```
 
-## Create the app
+## Create App
 
 Create and configure the enterprise internal app and its robot on the [DingTalk Open Platform](https://open.dingtalk.com/).
 
@@ -45,7 +45,7 @@ Create and configure the enterprise internal app and its robot on the [DingTalk 
   </Step>
 </Steps>
 
-## Prepare the card templates
+## Prepare Card Templates
 
 DingTalk interactive cards must be built first in the [Card Platform](https://open-dev.dingtalk.com/fe/card); at runtime the channel only fills in the template variables. The channel uses two kinds of templates, both optional: leave one out and the corresponding capability degrades.
 
@@ -74,7 +74,7 @@ The **streaming card template** drives streaming replies. Place an AI card strea
 DingTalk caps the content size of a single card update. Once the reply grows past that cap, the channel stops streaming and sends the complete answer as a regular Markdown message instead.
 </Note>
 
-## Start the agent service
+## Start Agent Service
 
 A channel runs on top of an [agent service](/versions/2.0.7dev/en/deploy/agent-service). Start the service with `create_app` and declare the accepted channel types via `channels`. Channels depend on a message bus (`message_bus`); use `InMemoryMessageBus` for single-machine development, and switch to `RedisMessageBus` for multi-process or multi-node deployment.
 
@@ -96,7 +96,7 @@ app = create_app(
 # uvicorn.run(app, host="0.0.0.0", port=8000)
 ```
 
-## Add the channel
+## Add Channel
 
 In the management UI (see the sample frontend [`examples/web_ui`](https://github.com/agentscope-ai/agentscope/tree/main/examples/web_ui)), add a channel through a visual form, with no config to write by hand.
 
@@ -111,7 +111,7 @@ In the management UI (see the sample frontend [`examples/web_ui`](https://github
     Enter the approval card and streaming card template IDs into the platform config; both may be left empty.
   </Step>
   <Step title="Configure routing rules">
-    Choose which agent handles messages and how sessions are scoped. See [Message routing](/versions/2.0.7dev/en/deploy/channel/routing) for what the rules mean.
+    Choose which agent handles messages and how sessions are scoped. See [Message Routing](/versions/2.0.7dev/en/deploy/channel/routing) for what the rules mean.
   </Step>
   <Step title="Save and enable">
     Save and enable the channel; the service opens the DingTalk Stream connection immediately and the robot comes online. Add it to a group or start a DM to begin.
@@ -122,7 +122,7 @@ In the management UI (see the sample frontend [`examples/web_ui`](https://github
 The management UI maps onto the `/channels` endpoints; call them directly when you need to create channels programmatically. See the [API](/versions/2.0.7dev/en/deploy/openapi.json) part of this chapter for the fields.
 </Note>
 
-## Platform config
+## Platform Config
 
 The DingTalk channel's platform-specific fields:
 
@@ -140,7 +140,7 @@ The DingTalk channel's platform-specific fields:
 When routing matches on `chat_type`, group chats use `group` and DMs use `private`.
 </Note>
 
-## Agent tools
+## Agent Tools
 
 Once the approval card template is configured, the channel gives the agent an extra set of DingTalk tools for sending to users or groups outside the current conversation. The lookup tools return a target of the form `user:<staffId>` or `group:<openConversationId>`, which the agent passes verbatim to a send tool.
 
@@ -156,7 +156,7 @@ Once the approval card template is configured, the channel gives the agent an ex
 A DingTalk enterprise robot cannot enumerate every group it belongs to, so `ListConversations` only lists chats that have sent a message since the current process started. To make a group appear in the result, send the robot a message in that group first.
 </Warning>
 
-## Verify and troubleshoot
+## Verify and Troubleshoot
 
 - Check the channel status in the management UI, or call `GET /channels/{id}/status` to confirm the Stream connection is established.
 - If the robot doesn't respond in a group, first check `only_at_reply` and the @-mention behavior, then check that the send-message permission was requested and published with the version.
@@ -164,10 +164,10 @@ A DingTalk enterprise robot cannot enumerate every group it belongs to, so `List
 - If clicking a card button does nothing, check that the button's callback parameters carry `action` and each identifier field from the table above.
 - If an attachment fails to send, check whether the file exceeds `max_media_bytes` and whether its extension is one DingTalk supports.
 
-## Further reading
+## Further Reading
 
 <CardGroup cols={2}>
-  <Card title="Message routing" icon="route" href="/versions/2.0.7dev/en/deploy/channel/routing" cta="Learn more" arrow>
+  <Card title="Message Routing" icon="route" href="/versions/2.0.7dev/en/deploy/channel/routing" cta="Learn more" arrow>
     Route different groups to different agents.
   </Card>
   <Card title="Feishu" icon="comment" href="/versions/2.0.7dev/en/deploy/channel/feishu" cta="Learn more" arrow>
