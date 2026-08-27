@@ -805,6 +805,7 @@
                         ]
                       },
                       "versions/2.0.8dev/zh/building-blocks/plan",
+                      "versions/2.0.8dev/zh/building-blocks/pipeline",
                       {
                         "group": "权限系统",
                         "pages": [
