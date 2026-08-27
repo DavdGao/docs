@@ -58,8 +58,10 @@ asyncio.run(main())
 
 `launch_console` 支持以下参数：
 
-<ParamField path="agent" type="Agent" required>
-  要交互的智能体。
+<ParamField path="agent" type="Agent | PipelineProtocol" required>
+  要交互的智能体，或任意满足
+  [`PipelineProtocol`](/versions/2.0.8dev/zh/building-blocks/pipeline/overview)
+  的流水线。
 </ParamField>
 
 <ParamField path="user_name" type="str" default="user">

@@ -14,11 +14,9 @@ description: "让执行者反复工作，直到验证者认可结果"
                                     └── 通过 ──▶ 结束
 ```
 
-循环最多转 `max_iters` 轮。**验证者是一个普通的 `Agent`**，不是某种特殊对象 —— 它的结论通过[结构化输出](/versions/2.0.8dev/zh/building-blocks/agent/run-agent)给出，所以一个需要读文件、跑命令、甚至请人确认的验证，走的是和执行完全相同的机制。
+**验证者是一个普通的 `Agent`**，不是某种特殊对象 —— 它的结论通过[结构化输出](/versions/2.0.8dev/zh/building-blocks/agent/run-agent)给出，所以一个需要读文件、跑命令、甚至请人确认的验证，走的是和执行完全相同的机制。
 
-## 快速开始
-
-执行者和验证者共享同一个[工作区](/versions/2.0.8dev/zh/building-blocks/workspace/overview)，验证者才能看到执行者真正写出来的东西，而不是它声称写了什么：
+## 运行一条流水线
 
 ```python
 import asyncio
@@ -34,6 +32,8 @@ from agentscope.workspace import LocalWorkspace
 
 
 async def main() -> None:
+    # 两个智能体共享同一个工作区，验证者才能看到执行者真正写出来的
+    # 东西，而不是它声称写了什么
     async with LocalWorkspace(workdir="./workspace") as workspace:
         model = DashScopeChatModel(
             credential=DashScopeCredential(
@@ -42,6 +42,7 @@ async def main() -> None:
             model="qwen3.8-max",
         )
 
+        # 执行者：干活的那个，用工作区的文件工具写代码
         executor = Agent(
             name="Executor",
             system_prompt="You're a programmer named 'Executor'.",
@@ -50,6 +51,8 @@ async def main() -> None:
             offloader=workspace,
         )
 
+        # 验证者：判定的那个。装同一套工具，因此它能真的去读代码、
+        # 跑测试，而不是只凭执行者的自述下结论
         verifier = Agent(
             name="Verifier",
             system_prompt="You're a reviewer named 'Verifier'.",
@@ -61,13 +64,17 @@ async def main() -> None:
         pipe = GoalPipeline(
             executor=executor,
             verifier=verifier,
+            # goal 是给验证者的判据，不是给执行者的任务
             goal="""检查执行者写的代码，判断是否合格：
 1. 必须是 Python。
 2. 必须包含 requirements.txt。
 3. 代码能无报错运行。
 4. 结构清晰，符合常见实践。""",
+            # 最多被驳回 5 次，之后即便未通过也停止
+            max_iters=5,
         )
 
+        # 流水线满足 PipelineProtocol，可以直接交给终端 UI
         await launch_console(agent=pipe)
 
 
@@ -87,7 +94,7 @@ asyncio.run(main())
 `goal` 是**给验证者的判据**，不是给执行者的任务描述。任务从 `reply_stream` 的输入进来，验收标准由 `goal` 固定，两者分开。
 </Note>
 
-## 验证如何进行
+### 一轮是怎么走完的
 
 验证者每一轮都被要求给出一个固定结构的结论：
 
@@ -97,9 +104,7 @@ class _VerificationResult(BaseModel):
     message: str     # 未通过时，说明缺什么、要改什么
 ```
 
-流水线用[结构化输出](/versions/2.0.8dev/zh/building-blocks/agent/run-agent)拿到它，因此验证者在给结论之前可以随意调用工具 —— 读代码、跑测试、查接口，都在它自己的推理循环里完成，流水线只关心最后那个结论。
-
-`message` 会被**原样**转交给执行者，所以它必须写清楚**缺什么**，而不是说「有问题」：
+流水线用结构化输出拿到它，因此验证者在给结论之前可以随意调用工具 —— 读代码、跑测试、查接口，都在它自己的推理循环里完成，流水线只关心最后那个结论。不通过时，`message` 会被**原样**转交给执行者，所以它必须写清楚**缺什么**，而不是说「有问题」。
 
 <Steps>
   <Step title="执行者工作">
@@ -116,9 +121,7 @@ class _VerificationResult(BaseModel):
   </Step>
 </Steps>
 
-## 重试与预算
-
-两种「重来」性质不同，流水线区别对待：
+两种「重来」性质不同，只有第一种消耗 `max_iters`：
 
 | 情况 | 含义 | 是否消耗 `max_iters` |
 |------|------|---------------------|
@@ -154,31 +157,20 @@ async for event in pipe.reply_stream(user_confirm_result_event):
 迭代预算记在流水线实例上，而不是 `reply_stream` 的局部变量里 —— 中断恢复不会让已经用掉的次数回满。
 </Note>
 
-## 配合终端 UI 调试
+## 在终端 UI 中调试
 
-调一条流水线最省事的方式，是把它整个交给[终端 UI](/versions/2.0.8dev/zh/building-blocks/console)：
+调一条流水线最省事的方式，是把它整个交给[终端 UI](/versions/2.0.8dev/zh/building-blocks/console)，不需要任何适配代码：
 
 ```python
-from agentscope.console import launch_console
-
 await launch_console(agent=pipe)
 ```
 
-因为 `GoalPipeline` 满足 `PipelineProtocol`，这里不需要任何适配代码。跑起来之后：
+跑起来之后：
 
 | 你会看到 | 由谁负责 |
 |----------|----------|
-| 两个智能体轮流发言，各自的思考、工具调用与结果都在同一个流里 | 流水线把内部事件统一吐出来，事件的 `name` 字段区分是谁 |
+| 两个智能体轮流发言，各自的思考、工具调用与结果都在同一个流里 | 流水线统一吐出内部事件，用 `reply_id` 区分是谁 |
 | 工具授权提示（`y` 允许一次，`a` 连同建议规则一起接受） | 终端 UI 负责询问，`reply_id` 保证答复回到正确的那个智能体 |
 | `Ctrl+C` 中断当前回复，`exit` / `quit` / `Ctrl+D` 退出 | 终端 UI |
 
 在确认提示上按 `Ctrl+D` 会发出 `UserInterruptEvent`：被挂起的那个智能体关掉未决的工具调用，整条流水线随之结束 —— 中断是**放弃**，不是继续。
-
-## 与计划模式的区别
-
-两者都在组织多步工作，但归属不同：
-
-- [计划模式](/versions/2.0.8dev/zh/building-blocks/plan)是**智能体自己**维护的任务清单 —— 拆几步、先做哪个，都由模型决定。
-- 流水线是**外部**施加的结构 —— 由谁执行、由谁验收、以何为准，都在构造时确定，模型无从改变。
-
-需要「过程可控、结果可审」时用流水线；需要「让模型自己安排」时用计划模式。两者可以叠加：流水线里的执行者完全可以自己用计划工具拆解任务。
