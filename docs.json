@@ -72,6 +72,14 @@
                       },
                       "versions/2.0.8dev/en/building-blocks/plan",
                       {
+                        "group": "Pipeline",
+                        "tag": "EXP",
+                        "pages": [
+                          "versions/2.0.8dev/en/building-blocks/pipeline/overview",
+                          "versions/2.0.8dev/en/building-blocks/pipeline/goal"
+                        ]
+                      },
+                      {
                         "group": "Permission System",
                         "pages": [
                           "versions/2.0.8dev/en/building-blocks/permission-system/overview",
