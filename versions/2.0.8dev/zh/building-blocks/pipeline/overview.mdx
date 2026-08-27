@@ -1,0 +1,59 @@
+---
+title: "概述"
+description: "把多个智能体按固定的运行逻辑组织起来，对外只暴露一个事件流"
+---
+
+流水线（Pipeline）把多个智能体按**写死在代码里**的运行逻辑组织起来 —— 谁先谁后、什么条件下回退、最多跑几轮，由开发者决定，模型改不了。对调用方而言，一条流水线和一个智能体没有区别：递进去输入，流式拿到事件。
+
+它承担三件事：
+
+| 职责 | 说明 |
+|------|------|
+| 组织运行逻辑 | 多个智能体之间的顺序、分支与回退，由流水线固定下来，不交给模型临场决定 |
+| 统一事件出口 | 内部所有智能体产生的事件，从同一个 `reply_stream` 流出，调用方不需要知道里面有几个智能体 |
+| 处理人机交互 | 任一智能体停在工具授权上时，流水线结束事件流而不是挂起；恢复时把答复送回正确的那一个 |
+
+第三件事是流水线存在的主要理由。多个智能体轮流工作时，「谁在等人」这个状态如果交给调用方维护，每加一种编排方式就要重写一遍。流水线把它收在内部：中断时事件流直接结束，状态留在各个智能体自己的 `state` 里；恢复时依据事件自带的 `reply_id` 判断当时是哪一方被挂起，因此**没有任何一方需要额外记录「刚才轮到我」**。
+
+## 统一的对外形态
+
+`PipelineProtocol` 描述的就是「接收输入、流式产出事件」这一件事：
+
+```python
+class PipelineProtocol(Protocol):
+    def reply_stream(
+        self,
+        inputs: Msg
+        | list[Msg]
+        | UserConfirmResultEvent
+        | UserInterruptEvent
+        | ExternalExecutionResultEvent,
+    ) -> AsyncGenerator[AgentEvent | Msg, None]:
+        """回复输入，并流式产出过程中的事件。"""
+```
+
+`Agent` 天然满足它 —— 一个智能体本身就是「只有一个成员」的流水线。因此凡是接受智能体的地方，流水线也能进去：
+
+```python
+async def watch(target: Agent | PipelineProtocol, inputs) -> None:
+    async for event in target.reply_stream(inputs):
+        print(event)
+```
+
+[终端 UI](/versions/2.0.8dev/zh/building-blocks/console) 的 `launch_console` 就是这样放宽的，可以直接把流水线丢进去调试。
+
+## 现有实现
+
+| 类 | 编排逻辑 |
+|----|----------|
+| [`GoalPipeline`](/versions/2.0.8dev/zh/building-blocks/pipeline/goal) | 执行者产出、验证者判定，不通过则带着理由退回重做，直到通过或用尽次数 |
+
+<Note>
+流水线模块处于实验阶段，接口可能在后续版本调整。
+</Note>
+
+## 延伸阅读
+
+- [目标流水线](/versions/2.0.8dev/zh/building-blocks/pipeline/goal) —— 执行与验证的循环
+- [终端 UI](/versions/2.0.8dev/zh/building-blocks/console) —— 在终端里直接跑一条流水线
+- [计划模式](/versions/2.0.8dev/zh/building-blocks/plan) —— 由模型自己维护的任务清单，与流水线互补

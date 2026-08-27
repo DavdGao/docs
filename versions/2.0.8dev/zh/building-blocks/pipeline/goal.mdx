@@ -1,29 +1,24 @@
 ---
-title: "流水线"
-description: "让一个智能体反复工作，直到另一个智能体认可结果"
+title: "目标流水线"
+description: "让执行者反复工作，直到验证者认可结果"
 ---
 
-## 概述
-
-单个智能体交出的第一版结果不一定合格。**流水线（Pipeline）** 把「做」和「验」拆成两个智能体，让它们循环起来：执行者产出，验证者判定，不合格就带着理由退回重做。
-
-`GoalPipeline` 是目前唯一的流水线实现：
+单个智能体交出的第一版结果不一定合格。`GoalPipeline` 把「做」和「验」拆成两个智能体，让它们循环起来：
 
 ```
-执行者 ──产出──▶ 验证者 ──不通过（附理由）──▶ 执行者
-                    │
-                    └──通过──▶ 结束
+        ┌────────── 不通过：带着理由退回重做 ──────────┐
+        │                                          │
+        ▼                                          │
+输入 ─▶ 执行者 ────── 产出 ──────▶ 验证者 ────────────┘
+                                    │
+                                    └── 通过 ──▶ 结束
 ```
 
-有三点值得先说明，它们决定了这个模块的用法：
-
-- **验证者就是一个普通的 `Agent`**，不是某种特殊对象。它的结论通过[结构化输出](/versions/2.0.8dev/zh/building-blocks/agent/run-agent)给出，因此一个需要读文件、跑命令、甚至请人确认的验证，走的是和执行完全相同的机制。
-- **中途不会挂起。** 任何一方停在工具授权上时，事件流直接结束，状态留在两个智能体各自的 `state` 里；把授权结果重新喂进来就能接着跑。
-- **它能放在智能体能去的地方。** `GoalPipeline` 满足 `PipelineProtocol`，所以可以直接交给[终端控制台](/versions/2.0.8dev/zh/building-blocks/console)。
+循环最多转 `max_iters` 轮。**验证者是一个普通的 `Agent`**，不是某种特殊对象 —— 它的结论通过[结构化输出](/versions/2.0.8dev/zh/building-blocks/agent/run-agent)给出，所以一个需要读文件、跑命令、甚至请人确认的验证，走的是和执行完全相同的机制。
 
 ## 快速开始
 
-执行者和验证者共享同一个工作区，验证者才能看到执行者真正写出来的东西，而不是它声称写了什么：
+执行者和验证者共享同一个[工作区](/versions/2.0.8dev/zh/building-blocks/workspace/overview)，验证者才能看到执行者真正写出来的东西，而不是它声称写了什么：
 
 ```python
 import asyncio
@@ -144,7 +139,7 @@ async for event in pipe.reply_stream(user_confirm_result_event):
     ...   # 从中断处接着跑
 ```
 
-**恢复时不需要说明该找谁。** 事件自带的 `reply_id` 指明了当时是哪一方被挂起，流水线据此把结果交给对应的智能体，因此两边都不需要额外记录「刚才轮到我」。
+**恢复时不需要说明该找谁。** 事件自带的 `reply_id` 指明了当时是哪一方被挂起，流水线据此把结果交给对应的智能体。
 
 `reply_stream` 接受的输入：
 
@@ -159,19 +154,25 @@ async for event in pipe.reply_stream(user_confirm_result_event):
 迭代预算记在流水线实例上，而不是 `reply_stream` 的局部变量里 —— 中断恢复不会让已经用掉的次数回满。
 </Note>
 
-## 放进控制台
+## 配合终端 UI 调试
 
-`PipelineProtocol` 描述了「能接收输入并流式产出事件」这一件事，`Agent` 天然满足它。所以凡是接受智能体的地方，流水线也能进去：
+调一条流水线最省事的方式，是把它整个交给[终端 UI](/versions/2.0.8dev/zh/building-blocks/console)：
 
 ```python
-from agentscope.pipeline import PipelineProtocol
+from agentscope.console import launch_console
 
-async def watch(target: Agent | PipelineProtocol, inputs) -> None:
-    async for event in target.reply_stream(inputs):
-        print(event)
+await launch_console(agent=pipe)
 ```
 
-[终端控制台](/versions/2.0.8dev/zh/building-blocks/console)的 `launch_console` 已经放宽到这个类型，可以直接把流水线丢进去调试，两个智能体轮流发言会一起渲染出来。
+因为 `GoalPipeline` 满足 `PipelineProtocol`，这里不需要任何适配代码。跑起来之后：
+
+| 你会看到 | 由谁负责 |
+|----------|----------|
+| 两个智能体轮流发言，各自的思考、工具调用与结果都在同一个流里 | 流水线把内部事件统一吐出来，事件的 `name` 字段区分是谁 |
+| 工具授权提示（`y` 允许一次，`a` 连同建议规则一起接受） | 终端 UI 负责询问，`reply_id` 保证答复回到正确的那个智能体 |
+| `Ctrl+C` 中断当前回复，`exit` / `quit` / `Ctrl+D` 退出 | 终端 UI |
+
+在确认提示上按 `Ctrl+D` 会发出 `UserInterruptEvent`：被挂起的那个智能体关掉未决的工具调用，整条流水线随之结束 —— 中断是**放弃**，不是继续。
 
 ## 与计划模式的区别
 
