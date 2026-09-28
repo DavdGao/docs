@@ -368,7 +368,17 @@ agent = Agent(
 ```
 
 ```python 对话模型路由
+import os
+from agentscope.credential import DashScopeCredential
 from agentscope.middleware import ChatModelCandidate, ModelRouterMiddleware
+from agentscope.model import DashScopeChatModel
+
+credential = DashScopeCredential(api_key=os.environ["DASHSCOPE_API_KEY"])
+fast = DashScopeChatModel(credential=credential, model="qwen-plus")
+strong = DashScopeChatModel(
+    credential=credential,
+    model="qwen3-235b-a22b-thinking-2507",
+)
 
 router = ModelRouterMiddleware(
     # 路由模型也可以是任意对话模型，通过结构化输出完成选择

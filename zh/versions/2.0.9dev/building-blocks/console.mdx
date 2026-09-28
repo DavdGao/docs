@@ -1,9 +1,11 @@
 ---
 title: "终端 UI"
-description: "不启动 Web 服务，直接在终端里与智能体对话并调试它的运行过程"
+description: "在终端快速测试、验证智能体运行逻辑"
 ---
 
-当开发者需要快速验证或调试一个智能体时，可以直接在终端中与它对话、查看完整的事件流，无需启动 Web 服务，也无需手动分发 `reply_stream` 产出的数十种事件。AgentScope 为此提供两种终端界面：`agentscope.console` 逐行打印事件流，只依赖核心安装；`agentscope.tui` 基于 [Textual](https://textual.textualize.io/) 提供全屏交互界面，支持 Markdown 渲染、键盘选择确认与 `AskUser` 问答表单。
+当开发者需要快速验证或调试一个智能体时，可以直接在终端中与它对话、查看完整的事件流，无需启动 Web 服务，也无需手动分发 `reply_stream` 产出的数十种事件。
+
+AgentScope 为此提供两种终端界面：`agentscope.console` 逐行打印事件流，只依赖核心安装；`agentscope.tui` 基于 [Textual](https://textual.textualize.io/) 提供全屏交互界面，支持 Markdown 渲染、键盘选择确认与 `AskUser` 问答表单。
 
 两个模块的接口与适用场景如下：
 
