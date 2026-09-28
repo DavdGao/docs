@@ -51,17 +51,21 @@ async def watch(target: Agent | PipelineProtocol, inputs) -> None:
 
 ## Implementations
 
-AgentScope ships one pipeline so far:
+AgentScope ships two pipelines so far:
 
 | Class | Arrangement |
 |-------|-------------|
 | [`GoalPipeline`](/en/versions/2.0.9dev/building-blocks/pipeline/goal) | An executor produces, a verifier judges, a refusal goes back with its reason, until the work passes or the attempts run out |
+| [`TeamPipeline`](/en/versions/2.0.9dev/building-blocks/pipeline/team) | A leader assigns tasks to members through tool calls, and each member's final reply comes back to the leader as the tool result |
 
 ## Further Reading
 
 <CardGroup cols={2}>
   <Card title="Goal Pipeline" icon="bullseye" href="/en/versions/2.0.9dev/building-blocks/pipeline/goal" cta="Read more">
     Keep an executor working until a verifier accepts the result.
+  </Card>
+  <Card title="Team Pipeline" icon="users" href="/en/versions/2.0.9dev/building-blocks/pipeline/team" cta="Read more">
+    Let a leader coordinate specialized agents to accomplish complex tasks together.
   </Card>
   <Card title="Console" icon="terminal" href="/en/versions/2.0.9dev/building-blocks/console" cta="Read more">
     Run a pipeline in the terminal and answer its authorization prompts.

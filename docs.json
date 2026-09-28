@@ -76,9 +76,11 @@
                         "tag": "EXP",
                         "pages": [
                           "en/versions/2.0.9dev/building-blocks/pipeline/overview",
-                          "en/versions/2.0.9dev/building-blocks/pipeline/goal"
+                          "en/versions/2.0.9dev/building-blocks/pipeline/goal",
+                          "en/versions/2.0.9dev/building-blocks/pipeline/team"
                         ]
                       },
+                      "en/versions/2.0.9dev/building-blocks/sop",
                       {
                         "group": "Permission System",
                         "pages": [
@@ -117,6 +119,7 @@
                     "pages": [
                       "en/versions/2.0.9dev/deploy/agent-service",
                       "en/versions/2.0.9dev/deploy/agent-team",
+                      "en/versions/2.0.9dev/deploy/sop",
                       "en/versions/2.0.9dev/deploy/sharing",
                       "en/versions/2.0.9dev/deploy/rag",
                       "en/versions/2.0.9dev/deploy/workspace-manager",
