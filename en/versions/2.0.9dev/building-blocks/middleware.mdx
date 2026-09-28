@@ -76,6 +76,7 @@ AgentScope currently supports the following middleware implementations:
 | Tracing | `TracingMiddleware` | Provides OpenTelemetry tracing across the full agent lifecycle |
 | Budget control | `ReplyBudgetControlMiddleware` | Controls the token budget for a single reply |
 | Speech generation | `TTSMiddleware` | Intercepts text output and synthesizes speech |
+| Model routing | `ModelRouterMiddleware` | Picks the chat model for each reply based on the user input |
 | Long-term memory | `AgenticMemoryMiddleware`,<br/>`Mem0Middleware` | Provides cross-session long-term memory implementations |
 | RAG | `RAGMiddleware` | Provides access to external knowledge bases |
 
@@ -292,6 +293,118 @@ DataBlockEndEvent
 ```
 
 Each `DataBlockDeltaEvent.data` carries an incremental base64-encoded audio chunk; the full audio is the concatenation of every delta's decoded bytes, keyed by `block_id`.
+
+### Model Routing
+
+When different kinds of requests suit different models (for example, everyday questions to a low-cost model and complex reasoning to a stronger one), `ModelRouterMiddleware` picks the chat model for each reply automatically.
+
+It works as follows:
+
+1. At the start of each reply, it takes the text of the latest user message in the input and asks a router model to pick one of the candidate models;
+2. For the duration of the reply, it replaces `agent.model` with the chosen model, and restores the agent's own model once the reply ends;
+3. It picks only once per reply: a reply that pauses (for example, for a user confirmation) and later resumes keeps its earlier choice.
+
+If the router model fails, picks a candidate that does not exist, or the input has no user text, the reply falls back to the agent's own model instead of failing.
+
+The router model can be either of the following:
+
+| Router model | How it picks |
+|--------------|--------------|
+| Classifier model (`ClassifierModelBase`) | Poses the candidates as a single-choice question to the classifier and takes the most probable option |
+| Chat model (`ChatModelBase`) | Uses structured output to have the model pick one of the candidate names |
+
+Classifier models come from the `agentscope.classifier` module. They answer typed questions (binary, single-choice, score) about a given input and return a probability for each answer. The built-in implementation is `JevClassifierModel`, backed by the TypeSafe API, which requires an optional dependency:
+
+```bash Install the Jev dependency
+pip install "agentscope[classifier-jev]"
+```
+
+The examples below route between two candidate models, using a classifier model and a chat model as the router respectively:
+
+<CodeGroup>
+```python Classifier router
+import os
+from agentscope.agent import Agent
+from agentscope.classifier import JevClassifierModel
+from agentscope.credential import DashScopeCredential, TypeSafeCredential
+from agentscope.middleware import ChatModelCandidate, ModelRouterMiddleware
+from agentscope.model import DashScopeChatModel
+
+credential = DashScopeCredential(api_key=os.environ["DASHSCOPE_API_KEY"])
+fast = DashScopeChatModel(credential=credential, model="qwen-plus")
+strong = DashScopeChatModel(
+    credential=credential,
+    model="qwen3-235b-a22b-thinking-2507",
+)
+
+router = ModelRouterMiddleware(
+    # Router model: the Jev classifier backed by the TypeSafe API
+    classifier_model=JevClassifierModel(
+        credential=TypeSafeCredential(api_key=os.environ["TYPESAFE_API_KEY"]),
+    ),
+    # Candidates: name is what the classifier returns, description says when to pick it
+    candidates=[
+        ChatModelCandidate(
+            name="fast",
+            model=fast,
+            description="Everyday questions and simple tasks",
+        ),
+        ChatModelCandidate(
+            name="strong",
+            model=strong,
+            description="Complex tasks that need multi-step reasoning, coding or math",
+        ),
+    ],
+)
+
+agent = Agent(
+    name="assistant",
+    system_prompt="You are a helpful assistant.",
+    # The default model, used when routing fails
+    model=fast,
+    middlewares=[router],
+)
+```
+
+```python Chat model router
+import os
+from agentscope.credential import DashScopeCredential
+from agentscope.middleware import ChatModelCandidate, ModelRouterMiddleware
+from agentscope.model import DashScopeChatModel
+
+credential = DashScopeCredential(api_key=os.environ["DASHSCOPE_API_KEY"])
+fast = DashScopeChatModel(credential=credential, model="qwen-plus")
+strong = DashScopeChatModel(
+    credential=credential,
+    model="qwen3-235b-a22b-thinking-2507",
+)
+
+router = ModelRouterMiddleware(
+    # Any chat model can route too, picking through structured output
+    classifier_model=fast,
+    candidates=[
+        ChatModelCandidate(name="fast", model=fast, description="Everyday questions and simple tasks"),
+        ChatModelCandidate(name="strong", model=strong, description="Complex tasks that need multi-step reasoning"),
+    ],
+    # Optional: custom routing instructions
+    instructions="Select the most suitable chat model for the user input.",
+)
+```
+</CodeGroup>
+
+The constructor takes the following arguments:
+
+<ParamField path="classifier_model" type="ClassifierModelBase | ChatModelBase" required>
+  The router model that picks among the candidates.
+</ParamField>
+
+<ParamField path="candidates" type="Sequence[ChatModelCandidate]" required>
+  The candidate models. Each `ChatModelCandidate` has a `name` (returned by the router model, must be unique), a `model` (the chat model used when chosen) and a `description` (when to choose it).
+</ParamField>
+
+<ParamField path="instructions" type="str">
+  The instructions of the routing question. Defaults to `"Select the most suitable chat model for responding to the user input."`.
+</ParamField>
 
 ### Long-Term Memory
 

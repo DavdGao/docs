@@ -76,6 +76,7 @@ AgentScope 目前支持如下的中间件实现：
 | 链路追踪 | `TracingMiddleware`                             | 提供智能体全生命周期的 OpenTelemetry 追踪 |
 | 预算控制 | `ReplyBudgetControlMiddleware`                  | 控制单次 reply 的 Token 预算        |
 | 语音生成 | `TTSMiddleware`                                 | 拦截文本输出并合成语音                  |
+| 模型路由 | `ModelRouterMiddleware`                         | 按用户输入为每次回复选择合适的对话模型          |
 | 长期记忆 | `AgenticMemoryMiddleware`，<br/>`Mem0Middleware` | 提供跨会话的长期记忆实现                 |
 | RAG  | `RAGMiddleware`                                 | 提供访问外部知识库的能力                 |
 
@@ -293,6 +294,118 @@ DataBlockEndEvent
 ```
 
 每个 `DataBlockDeltaEvent.data` 携带增量 base64 编码的音频 chunk；完整音频为所有 delta 解码后的字节拼接，按 `block_id` 关联。
+
+### 模型路由
+
+当不同类型的请求适合交给不同模型处理时（例如日常问答交给低成本模型，复杂推理交给更强的模型），`ModelRouterMiddleware` 可以为每次回复自动选择对话模型。
+
+它的工作方式如下：
+
+1. 每次回复开始时，读取输入中最新一条用户消息的文本，交给路由模型从候选模型中选出一个；
+2. 本次回复期间把 `agent.model` 替换为选中的模型，回复结束后恢复为智能体原来的模型；
+3. 每次回复只选择一次，回复因用户确认等原因暂停后再恢复时，沿用之前的选择。
+
+路由模型出错、选中不存在的候选，或者输入中没有用户文本时，本次回复沿用智能体自己的模型，不会中断回复。
+
+路由模型可以是以下两种之一：
+
+| 路由模型 | 选择方式 |
+|----------|----------|
+| 分类模型（`ClassifierModelBase`） | 把候选模型作为一个单选问题交给分类模型，取概率最高的选项 |
+| 对话模型（`ChatModelBase`） | 通过结构化输出让模型从候选名称中选出一个 |
+
+分类模型来自 `agentscope.classifier` 模块，它针对给定输入回答类型化的问题（二元判断、单选、评分），并给出每个答案的概率。目前内置的实现是基于 TypeSafe API 的 `JevClassifierModel`，使用前需要安装可选依赖：
+
+```bash 安装 Jev 依赖
+pip install "agentscope[classifier-jev]"
+```
+
+下面的示例分别用分类模型和对话模型作为路由模型，在两个候选模型之间选择：
+
+<CodeGroup>
+```python 分类模型路由
+import os
+from agentscope.agent import Agent
+from agentscope.classifier import JevClassifierModel
+from agentscope.credential import DashScopeCredential, TypeSafeCredential
+from agentscope.middleware import ChatModelCandidate, ModelRouterMiddleware
+from agentscope.model import DashScopeChatModel
+
+credential = DashScopeCredential(api_key=os.environ["DASHSCOPE_API_KEY"])
+fast = DashScopeChatModel(credential=credential, model="qwen-plus")
+strong = DashScopeChatModel(
+    credential=credential,
+    model="qwen3-235b-a22b-thinking-2507",
+)
+
+router = ModelRouterMiddleware(
+    # 路由模型：基于 TypeSafe API 的 Jev 分类模型
+    classifier_model=JevClassifierModel(
+        credential=TypeSafeCredential(api_key=os.environ["TYPESAFE_API_KEY"]),
+    ),
+    # 候选模型：name 是分类模型返回的名称，description 说明何时选择它
+    candidates=[
+        ChatModelCandidate(
+            name="fast",
+            model=fast,
+            description="日常问答与简单任务",
+        ),
+        ChatModelCandidate(
+            name="strong",
+            model=strong,
+            description="需要多步推理、编程或数学的复杂任务",
+        ),
+    ],
+)
+
+agent = Agent(
+    name="assistant",
+    system_prompt="You are a helpful assistant.",
+    # 路由失败时使用的默认模型
+    model=fast,
+    middlewares=[router],
+)
+```
+
+```python 对话模型路由
+import os
+from agentscope.credential import DashScopeCredential
+from agentscope.middleware import ChatModelCandidate, ModelRouterMiddleware
+from agentscope.model import DashScopeChatModel
+
+credential = DashScopeCredential(api_key=os.environ["DASHSCOPE_API_KEY"])
+fast = DashScopeChatModel(credential=credential, model="qwen-plus")
+strong = DashScopeChatModel(
+    credential=credential,
+    model="qwen3-235b-a22b-thinking-2507",
+)
+
+router = ModelRouterMiddleware(
+    # 路由模型也可以是任意对话模型，通过结构化输出完成选择
+    classifier_model=fast,
+    candidates=[
+        ChatModelCandidate(name="fast", model=fast, description="日常问答与简单任务"),
+        ChatModelCandidate(name="strong", model=strong, description="需要多步推理的复杂任务"),
+    ],
+    # 可选：自定义路由指令
+    instructions="Select the most suitable chat model for the user input.",
+)
+```
+</CodeGroup>
+
+构造参数如下：
+
+<ParamField path="classifier_model" type="ClassifierModelBase | ChatModelBase" required>
+  用于选择候选模型的路由模型。
+</ParamField>
+
+<ParamField path="candidates" type="Sequence[ChatModelCandidate]" required>
+  候选模型列表。每个 `ChatModelCandidate` 包含 `name`（路由模型返回的名称，必须唯一）、`model`（选中时使用的对话模型）和 `description`（何时选择该模型）。
+</ParamField>
+
+<ParamField path="instructions" type="str">
+  路由问题的指令。默认为 `"Select the most suitable chat model for responding to the user input."`。
+</ParamField>
 
 ### 长期记忆
 

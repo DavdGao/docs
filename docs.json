@@ -76,9 +76,11 @@
                         "tag": "EXP",
                         "pages": [
                           "en/versions/2.0.9dev/building-blocks/pipeline/overview",
-                          "en/versions/2.0.9dev/building-blocks/pipeline/goal"
+                          "en/versions/2.0.9dev/building-blocks/pipeline/goal",
+                          "en/versions/2.0.9dev/building-blocks/pipeline/team"
                         ]
                       },
+                      "en/versions/2.0.9dev/building-blocks/sop",
                       {
                         "group": "Permission System",
                         "pages": [
@@ -117,6 +119,7 @@
                     "pages": [
                       "en/versions/2.0.9dev/deploy/agent-service",
                       "en/versions/2.0.9dev/deploy/agent-team",
+                      "en/versions/2.0.9dev/deploy/sop",
                       "en/versions/2.0.9dev/deploy/sharing",
                       "en/versions/2.0.9dev/deploy/rag",
                       "en/versions/2.0.9dev/deploy/workspace-manager",
@@ -964,9 +967,11 @@
                         "tag": "EXP",
                         "pages": [
                           "zh/versions/2.0.9dev/building-blocks/pipeline/overview",
-                          "zh/versions/2.0.9dev/building-blocks/pipeline/goal"
+                          "zh/versions/2.0.9dev/building-blocks/pipeline/goal",
+                          "zh/versions/2.0.9dev/building-blocks/pipeline/team"
                         ]
                       },
+                      "zh/versions/2.0.9dev/building-blocks/sop",
                       {
                         "group": "权限系统",
                         "pages": [
@@ -1005,6 +1010,7 @@
                     "pages": [
                       "zh/versions/2.0.9dev/deploy/agent-service",
                       "zh/versions/2.0.9dev/deploy/agent-team",
+                      "zh/versions/2.0.9dev/deploy/sop",
                       "zh/versions/2.0.9dev/deploy/sharing",
                       "zh/versions/2.0.9dev/deploy/rag",
                       "zh/versions/2.0.9dev/deploy/workspace-manager",

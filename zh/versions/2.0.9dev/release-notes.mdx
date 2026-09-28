@@ -7,6 +7,88 @@ description: "AgentScope 版本改动和更新日志。"
 如需查看完整的提交历史与贡献者名单，请访问 [GitHub Releases 页面](https://github.com/agentscope-ai/agentscope/releases)。
 </Tip>
 
+## v2.0.9
+
+*发布于 2026-09-28。*
+
+<Note>
+**Highlight**：本次版本新增了
+	- 按固定步骤逐步验收的标准作业流程（SOP），及其服务层接口，
+	- 由队长向成员分派任务的 `TeamPipeline`，
+	- OpenAI、Gemini 与 xAI 的实时语音模型，
+	- 全屏终端界面 `agentscope.tui`，以及
+	- MiniMax 模型与按输入选择模型的路由中间件。
+</Note>
+
+### 新增
+
+**SOP**
+
+- **标准作业流程**（实验性）：新增 `agentscope.sop` 模块，把任务拆成按顺序推进、逐步验收的里程碑，运行状态可以持久化并在中断后继续。([#2393](https://github.com/agentscope-ai/agentscope/pull/2393))
+- **SOP 服务层**（实验性）：智能体服务新增 `/sop` 接口，支持保存流程、发起运行与人工验收，每一步都在普通会话中执行，可以直接在会话里观察进度。([#2617](https://github.com/agentscope-ai/agentscope/pull/2617))
+
+**Pipeline**
+
+- **`TeamPipeline`**：队长通过工具调用把任务分派给成员智能体，成员并发执行后把结果交回队长，适合由一个智能体统筹多个专长智能体的场景。([#2764](https://github.com/agentscope-ai/agentscope/pull/2764))
+
+**Realtime**
+
+- **更多实时语音模型**：新增 OpenAI Realtime、Gemini Live 与 xAI Grok Voice。([#2552](https://github.com/agentscope-ai/agentscope/pull/2552)、[#2556](https://github.com/agentscope-ai/agentscope/pull/2556)、[#2553](https://github.com/agentscope-ai/agentscope/pull/2553))
+
+**TUI**
+
+- **全屏终端界面**：新增基于 Textual 的 `agentscope.tui` 模块，支持流式渲染、工具确认与 `AskUser` 问答；`launch_realtime_ui` 可在终端中直接进行实时语音对话。([#2507](https://github.com/agentscope-ai/agentscope/pull/2507)、[#2594](https://github.com/agentscope-ai/agentscope/pull/2594))
+
+**Tool**
+
+- **`AskUser`**：新增外部执行工具，智能体可以向用户提出选择题，由前端展示并交回答案。([#2573](https://github.com/agentscope-ai/agentscope/pull/2573))
+
+**Model**
+
+- **MiniMax**：新增 `MiniMaxChatModel` 及配套的凭证与格式化器，默认模型为 MiniMax-M3。([#1764](https://github.com/agentscope-ai/agentscope/pull/1764))
+- **模型路由**：新增 `agentscope.classifier` 模块与 `ModelRouterMiddleware`，按用户输入为每次回复选择合适的模型，简单请求交给低成本模型，复杂请求交给更强的模型。([#2758](https://github.com/agentscope-ai/agentscope/pull/2758))
+- **新模型卡片**：覆盖 Claude、Qwen、DeepSeek、Gemini、GPT、豆包、Grok 等系列的最新模型，以及 Ollama 上的常用小模型。([#2727](https://github.com/agentscope-ai/agentscope/pull/2727)、[#1753](https://github.com/agentscope-ai/agentscope/pull/1753))
+
+**渠道**
+
+- **钉钉知识库工具**：钉钉渠道的智能体可以直接检索钉钉知识库。([#2464](https://github.com/agentscope-ai/agentscope/pull/2464))
+
+### 变更
+
+**Agent Service**
+
+- **cron 星期编号与标准一致**：`0` 与 `7` 表示周日，此前沿用 APScheduler 的编号，同一表达式会晚一天触发。([#2770](https://github.com/agentscope-ai/agentscope/pull/2770))
+- **模型窗口取自模型卡片**：服务创建的模型带上卡片声明的 `context_size`，上下文压缩按模型真实的窗口大小触发，此前一律使用默认值。([#2597](https://github.com/agentscope-ai/agentscope/pull/2597))
+
+### 修复
+
+**Agent**
+
+- 截断超长工具结果时保留元数据与时间戳；结构化输出等最终消息保留本次回复的用量。([#2754](https://github.com/agentscope-ai/agentscope/pull/2754)、[#2562](https://github.com/agentscope-ai/agentscope/pull/2562))
+
+**Tool**
+
+- 只读命令判定收紧，带破坏性参数的 git 子命令、`tee` 与多种 sed 写法不再绕过权限确认。([#2883](https://github.com/agentscope-ai/agentscope/pull/2883)、[#2629](https://github.com/agentscope-ai/agentscope/pull/2629)、[#2747](https://github.com/agentscope-ai/agentscope/pull/2747)、[#2795](https://github.com/agentscope-ai/agentscope/pull/2795)、[#2824](https://github.com/agentscope-ai/agentscope/pull/2824))
+- 连续 `Edit` 同一文件不再被误判为文件已过期。([#2865](https://github.com/agentscope-ai/agentscope/pull/2865))
+
+**Formatter**
+
+- 多个 API 的多模态输入更完整：DeepSeek 保留图片、Moonshot 支持视频，xAI 只发送支持的图片类型，并行工具结果中的媒体不再打断工具消息序列。([#2825](https://github.com/agentscope-ai/agentscope/pull/2825)、[#2823](https://github.com/agentscope-ai/agentscope/pull/2823)、[#2808](https://github.com/agentscope-ai/agentscope/pull/2808)、[#2613](https://github.com/agentscope-ai/agentscope/pull/2613))
+
+**RAG**
+
+- Word、Excel、PowerPoint 解析器不再丢失嵌套表格、组合形状、图片占位符中的内容，Excel 保留单元格原始文本（如 `00123`、`NA`）。([#2759](https://github.com/agentscope-ai/agentscope/pull/2759)、[#2660](https://github.com/agentscope-ai/agentscope/pull/2660)、[#2851](https://github.com/agentscope-ai/agentscope/pull/2851)、[#2893](https://github.com/agentscope-ai/agentscope/pull/2893)、[#2666](https://github.com/agentscope-ai/agentscope/pull/2666))
+- DashScope 多模态向量模型正确声明多模态能力，知识库的图片查询不再被丢弃。([#2701](https://github.com/agentscope-ai/agentscope/pull/2701))
+
+**Realtime**
+
+- 断线重连更稳定：重连后不再收到上一个会话的结束事件，发送文本前会先完成重连。([#2588](https://github.com/agentscope-ai/agentscope/pull/2588)、[#2591](https://github.com/agentscope-ai/agentscope/pull/2591))
+
+**Agent Service**
+
+- 会话停在工具确认上时，收件箱消息不再触发一次报错的回复；回复收尾期间到达的渠道消息不再丢失。([#2849](https://github.com/agentscope-ai/agentscope/pull/2849)、[#2521](https://github.com/agentscope-ai/agentscope/pull/2521))
+- 沙箱工作区移除无状态 MCP 时同步从网关注销。([#2777](https://github.com/agentscope-ai/agentscope/pull/2777))
+
 ## v2.0.8
 
 *发布于 2026-09-08。*

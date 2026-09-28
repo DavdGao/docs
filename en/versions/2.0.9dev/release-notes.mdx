@@ -7,6 +7,88 @@ description: "Version history of AgentScope 2.x, including new features, changes
 For the full commit-level history and contributor list, see the [GitHub releases page](https://github.com/agentscope-ai/agentscope/releases).
 </Tip>
 
+## v2.0.9
+
+*Released on 2026-09-28.*
+
+<Note>
+**Highlight**: This release adds
+	- standard operating procedures (SOP), fixed sequences of verified milestones, with a service-layer API,
+	- `TeamPipeline`, where a leader delegates tasks to members,
+	- realtime voice models from OpenAI, Gemini, and xAI,
+	- `agentscope.tui`, a full-screen terminal interface, and
+	- MiniMax models and a middleware that picks the model for each input.
+</Note>
+
+### Added
+
+**SOP**
+
+- **Standard operating procedures** (experimental): the new `agentscope.sop` module splits a task into ordered milestones that are each verified before the next begins; run state can be persisted and resumed after an interruption. ([#2393](https://github.com/agentscope-ai/agentscope/pull/2393))
+- **SOP service layer** (experimental): the agent service gains `/sop` endpoints to store procedures, start runs, and review steps by hand. Each step runs in an ordinary session, so progress can be watched right there. ([#2617](https://github.com/agentscope-ai/agentscope/pull/2617))
+
+**Pipeline**
+
+- **`TeamPipeline`**: a leader delegates tasks to member agents through a tool call, and members run concurrently before handing their results back. Suits one agent coordinating several specialists. ([#2764](https://github.com/agentscope-ai/agentscope/pull/2764))
+
+**Realtime**
+
+- **More realtime voice models**: OpenAI Realtime, Gemini Live, and xAI Grok Voice. ([#2552](https://github.com/agentscope-ai/agentscope/pull/2552), [#2556](https://github.com/agentscope-ai/agentscope/pull/2556), [#2553](https://github.com/agentscope-ai/agentscope/pull/2553))
+
+**TUI**
+
+- **Full-screen terminal interface**: the new Textual-based `agentscope.tui` module streams replies and handles tool confirmation and `AskUser` questions in the terminal; `launch_realtime_ui` brings realtime voice conversations there too. ([#2507](https://github.com/agentscope-ai/agentscope/pull/2507), [#2594](https://github.com/agentscope-ai/agentscope/pull/2594))
+
+**Tool**
+
+- **`AskUser`**: a new external execution tool that lets the agent put multiple-choice questions to the user, with the frontend presenting them and returning the answers. ([#2573](https://github.com/agentscope-ai/agentscope/pull/2573))
+
+**Model**
+
+- **MiniMax**: `MiniMaxChatModel` with its credential and formatters; MiniMax-M3 is the default model. ([#1764](https://github.com/agentscope-ai/agentscope/pull/1764))
+- **Model routing**: the new `agentscope.classifier` module and `ModelRouterMiddleware` choose the model for each reply from the user input, sending simple requests to a cheaper model and hard ones to a stronger one. ([#2758](https://github.com/agentscope-ai/agentscope/pull/2758))
+- **New model cards**: the latest Claude, Qwen, DeepSeek, Gemini, GPT, Doubao, and Grok models, plus common small models on Ollama. ([#2727](https://github.com/agentscope-ai/agentscope/pull/2727), [#1753](https://github.com/agentscope-ai/agentscope/pull/1753))
+
+**Channel**
+
+- **DingTalk knowledge base tools**: agents on a DingTalk channel can search DingTalk knowledge bases directly. ([#2464](https://github.com/agentscope-ai/agentscope/pull/2464))
+
+### Changed
+
+**Agent Service**
+
+- **Standard cron weekday numbering**: `0` and `7` now mean Sunday. APScheduler's numbering was used before, so the same expression fired a day late. ([#2770](https://github.com/agentscope-ai/agentscope/pull/2770))
+- **Context window from the model card**: models created by the service carry the card's `context_size`, so context compression triggers at the model's real window instead of a default. ([#2597](https://github.com/agentscope-ai/agentscope/pull/2597))
+
+### Fixed
+
+**Agent**
+
+- Truncating an oversized tool result keeps its metadata and timestamps; final messages such as structured output keep the reply's usage. ([#2754](https://github.com/agentscope-ai/agentscope/pull/2754), [#2562](https://github.com/agentscope-ai/agentscope/pull/2562))
+
+**Tool**
+
+- Read-only command detection is stricter: git subcommands with destructive arguments, `tee`, and several sed forms no longer skip permission confirmation. ([#2883](https://github.com/agentscope-ai/agentscope/pull/2883), [#2629](https://github.com/agentscope-ai/agentscope/pull/2629), [#2747](https://github.com/agentscope-ai/agentscope/pull/2747), [#2795](https://github.com/agentscope-ai/agentscope/pull/2795), [#2824](https://github.com/agentscope-ai/agentscope/pull/2824))
+- Editing the same file repeatedly with `Edit` is no longer rejected as stale. ([#2865](https://github.com/agentscope-ai/agentscope/pull/2865))
+
+**Formatter**
+
+- Multimodal input is more complete across APIs: DeepSeek keeps images, Moonshot accepts video, xAI sends only supported image types, and media in parallel tool results no longer interrupts the tool message sequence. ([#2825](https://github.com/agentscope-ai/agentscope/pull/2825), [#2823](https://github.com/agentscope-ai/agentscope/pull/2823), [#2808](https://github.com/agentscope-ai/agentscope/pull/2808), [#2613](https://github.com/agentscope-ai/agentscope/pull/2613))
+
+**RAG**
+
+- The Word, Excel, and PowerPoint parsers no longer lose content in nested tables, grouped shapes, or picture placeholders, and Excel keeps cells' original text (such as `00123` or `NA`). ([#2759](https://github.com/agentscope-ai/agentscope/pull/2759), [#2660](https://github.com/agentscope-ai/agentscope/pull/2660), [#2851](https://github.com/agentscope-ai/agentscope/pull/2851), [#2893](https://github.com/agentscope-ai/agentscope/pull/2893), [#2666](https://github.com/agentscope-ai/agentscope/pull/2666))
+- DashScope multimodal embedding models declare their multimodal capability, so image queries to a knowledge base are no longer dropped. ([#2701](https://github.com/agentscope-ai/agentscope/pull/2701))
+
+**Realtime**
+
+- Reconnection is more reliable: the previous session's end events no longer leak into the new one, and text input waits for the reconnect to finish. ([#2588](https://github.com/agentscope-ai/agentscope/pull/2588), [#2591](https://github.com/agentscope-ai/agentscope/pull/2591))
+
+**Agent Service**
+
+- An inbox message no longer triggers a failing reply while the session is parked on a tool confirmation, and channel messages arriving while a reply wraps up are no longer lost. ([#2849](https://github.com/agentscope-ai/agentscope/pull/2849), [#2521](https://github.com/agentscope-ai/agentscope/pull/2521))
+- Removing a stateless MCP from a sandboxed workspace also deregisters it from the gateway. ([#2777](https://github.com/agentscope-ai/agentscope/pull/2777))
+
 ## v2.0.8
 
 *Released on 2026-09-08.*
