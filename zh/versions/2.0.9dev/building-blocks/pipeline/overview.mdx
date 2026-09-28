@@ -51,17 +51,21 @@ async def watch(target: Agent | PipelineProtocol, inputs) -> None:
 
 ## 现有实现
 
-AgentScope 目前提供一种流水线实现：
+AgentScope 目前提供两种流水线实现：
 
 | 类 | 编排逻辑 |
 |----|----------|
 | [`GoalPipeline`](/zh/versions/2.0.9dev/building-blocks/pipeline/goal) | 执行者产出，验证者判定，不通过则带着理由退回重做，直到通过或用尽次数 |
+| [`TeamPipeline`](/zh/versions/2.0.9dev/building-blocks/pipeline/team) | 领导者通过工具调用把任务分派给成员，成员的最终回复作为工具结果交回领导者 |
 
 ## 延伸阅读
 
 <CardGroup cols={2}>
   <Card title="目标流水线" icon="bullseye" href="/zh/versions/2.0.9dev/building-blocks/pipeline/goal" cta="查看详情">
     让执行者反复工作，直到验证者认可结果。
+  </Card>
+  <Card title="团队流水线" icon="users" href="/zh/versions/2.0.9dev/building-blocks/pipeline/team" cta="查看详情">
+    让领导者按需分派任务给成员，并汇总它们的结果。
   </Card>
   <Card title="终端 UI" icon="terminal" href="/zh/versions/2.0.9dev/building-blocks/console" cta="查看详情">
     在终端里运行流水线并处理工具授权。

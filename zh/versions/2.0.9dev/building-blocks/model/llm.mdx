@@ -17,6 +17,11 @@ description: "创建并调用对话模型，也可以接入你自己的模型 AP
 | Volcengine         | `VolcengineChatModel` |
 | xAI                | `XAIChatModel`        |
 | Ollama             | `OllamaChatModel`     |
+| MiniMax            | `MiniMaxChatModel`    |
+
+<Note>
+`MiniMaxChatModel` 通过 MiniMax 兼容 Anthropic 的接口调用模型，内置 `MiniMax-M3`、`MiniMax-M2.7` 与 `MiniMax-M2.7-highspeed` 的模型卡片。它只支持自适应推理：设置 `thinking_enable=True` 即可开启，无需指定推理预算。`MiniMaxCredential` 默认连接国际站 `https://api.minimax.io/anthropic`，中国大陆的开发者需要把 `base_url` 设为 `https://api.minimax.cn/anthropic`。
+</Note>
 
 ## 创建模型
 
